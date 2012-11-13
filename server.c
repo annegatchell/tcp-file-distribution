@@ -13,7 +13,8 @@
 #include <unistd.h>
 #include <sys/time.h>
 #include <stdlib.h>
-
+#include <netdb.h>
+#include <string.h>
 
 #define MAX_CONNECTS 50
 
@@ -27,7 +28,7 @@ void *connection(void *);
 
 //global variables
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-char logFileName[64];
+// char logFileName[64];
 
 
 
@@ -35,15 +36,19 @@ int main(int argc,char *argv[])
 {
     
     struct timeval currTime;
+    time_t nowtime;
+    struct tm *nowtm;
+    char tmbuf[64];
     pthread_t th;
     int r;
-    logFileName = "log.txt"
     FILE *logFile;
     int sockfd, newsockfd = 0; //Listen on sockfd, new connection on newsockfd
-    struct addrinfo hints, *servinfo, *p;
+    struct addrinfo hints, *servinfo, *p; //servinfo points to results
     struct sockaddr_storage their_addr; //Connector's address information
     socklen_t sin_size;
     struct sigaction sa;
+    int status; //The error status
+    int BACKLOG = 10; //Number of clients allowed in queue
 
 
     //check arguments here
@@ -53,25 +58,57 @@ int main(int argc,char *argv[])
     }
 
     gettimeofday(&currTime,NULL);
-    logFile = fopen(logFileName,"w");
-    fprintf(logFile,"Server started at ...");
+	nowtime = currTime.tv_sec;
+	nowtm = localtime(&nowtime);
+	strftime(tmbuf, sizeof (tmbuf), "%Y-%m-%d %H:%M:%S\n", nowtm);
+  	char* logFileName = argv[2];
+    logFile = fopen(logFileName,"a");
+    fprintf(logFile,"Server started at %s", tmbuf);
     fclose(logFile);
 
+    //Set up the 
+    memset(&hints, 0, sizeof hints);
+    hints.ai_family = AF_UNSPEC; // AF_INET or AF_INET6 to force version
+    hints.ai_socktype = SOCK_STREAM; //TCP stream sockets
+    hints.ai_flags = AI_PASSIVE;     //fill in my IP for me
 
-    return 1
+    if ((status = getaddrinfo(NULL, argv[1], &hints, &servinfo)) != 0) {
+        fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(status));
+        return 2;
+    }
+
+     // loop through all the results and bind to the first we can
+    for(p = servinfo; p != NULL; p = p->ai_next) {
     /*
      * Open a TCP socket (an Internet stream socket).
      */
-
-
-    /*
+        if ((sockfd = socket(p->ai_family, p->ai_socktype,
+                p->ai_protocol)) == -1) {
+            perror("Server could not set up socket\n");
+            continue;
+        }
+     /*
      * Bind our local address so that the client can send to us.
      */
-
-
+        if((status = bind(sockfd, p->ai_addr, p->ai_addrlen)) == -1){
+        	perror("Server could not bind to socket\n");
+        }
     /*
      * here you should listen() on your TCP socket
      */
+     	if((listen(sockfd, BACKLOG)) == -1){
+     		perror("Server can't listen!!!\n");
+     	}
+    }
+
+    return 1;
+    
+
+
+   
+
+
+    
 
     for ( ; ; ) //endless loop
     {
@@ -115,6 +152,7 @@ int main(int argc,char *argv[])
 
 
     }
+    freeaddrinfo(servinfo);
 }
 
 

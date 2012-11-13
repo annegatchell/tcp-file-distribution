@@ -11,4 +11,4 @@ server: server.o
 	${CC} ${CFLAGS} -lpthread -o $@ server.o
 
 clean:
-	rm *.o client server
+	rm *.o client server log.txt
