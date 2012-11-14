@@ -39,9 +39,10 @@ void sigchld_handler(int s)
 void *get_in_addr(struct sockaddr *sa)
 {
     if (sa->sa_family == AF_INET) {
+    	printf("INET\n");
         return &(((struct sockaddr_in*)sa)->sin_addr);
     }
-
+	printf("INET6\n");
     return &(((struct sockaddr_in6*)sa)->sin6_addr);
 }
 
@@ -189,58 +190,62 @@ int main(int argc,char *argv[])
 	                	FD_CLR (i, &active_fd_set);
 	                }
 	                else{
-		                printf("Bytes received %d\n message %s\n", bytes_received, receive_buf);
-		            //########################
-		            // This is the point where you should save the files in the hashtable
-		            //########################
+		                printf("Bytes received %d\nmessage %s\n", bytes_received, receive_buf);
+			            //########################
+			            // This is the point where you should save the files in the hashtable
+			            //########################
 
-		            //since you're talking nicely now.. probably a good idea send them
-					//a message to welcome them to the service.
-		            char* welcome_msg = "Welcome to the File Sharing System\n";
-		            int len, bytes_sent;
-		            len = strlen(welcome_msg);
-		            if((bytes_sent = send(i, welcome_msg, len, 0)) == -1){
-		            	perror("send error");
-		            	return 2;
+			            //since you're talking nicely now.. probably a good idea send them
+						//a message to welcome them to the service.
+			            char* welcome_msg = "Welcome to the File Sharing System\n";
+			            int len, bytes_sent;
+			            len = strlen(welcome_msg);
+			            if((bytes_sent = send(i, welcome_msg, len, 0)) == -1){
+			            	perror("send error");
+			            	return 2;
+			            }
+			            printf("Sent welcome: Bytes sent: %d\n", bytes_sent);
+
+			            //if there are others connected to the server, probably good to notify them
+						//that someone else has joined.
+
+
+						pthread_mutex_lock(&mutex);
+						//now add your new user to your global list of users
+						pthread_mutex_unlock(&mutex);
+
+						//now you need to start a thread to take care of the 
+						//rest of the messages for that client
+						r = pthread_create(&th, NULL, &connection, (void *)i);
+						if (r != 0) { fprintf(stderr, "thread create failed\n"); }
+
+						//Get this guy off the select list, since the thread is watching now
+						FD_CLR (i, &active_fd_set);
+						//A requirement for 5273 students:
+						//at this point...
+						//whether or not someone connected, you should probably
+						//look for clients that should be timed out
+						//and kick them out
+						//oh, and notify everyone that they're gone.
 		            }
-		            printf("Sent welcome: Bytes sent: %d\n", bytes_sent);
-
-		            //if there are others connected to the server, probably good to notify them
-					//that someone else has joined.
 
 
-					pthread_mutex_lock(&mutex);
-					//now add your new user to your global list of users
-					pthread_mutex_unlock(&mutex);
-
-					//now you need to start a thread to take care of the 
-					//rest of the messages for that client
-					r = pthread_create(&th, 0, connection, (void *)i);
-					if (r != 0) { fprintf(stderr, "thread create failed\n"); }
-
-					//A requirement for 5273 students:
-					//at this point...
-					//whether or not someone connected, you should probably
-					//look for clients that should be timed out
-					//and kick them out
-					//oh, and notify everyone that they're gone.
-		            }
                 }
                 else{
-                	printf("LAST ELSE\n");
+                	printf("WHAT DO I DO HERE?\n");
                 }
         	}
-        } 
-        return 1;
+        }
     }
 
 	
-	return 1;
+	
 	
 	
 
     //}
-    //freeaddrinfo(servinfo);
+    freeaddrinfo(servinfo);
+    return 0;
 }
 
 
@@ -254,6 +259,7 @@ void *connection(void *sockid) {
     char buffer[1000];
     struct timeval curTime;
     int e, rc = 0;
+    int bytes_received;
 
     pthread_detach(pthread_self());  //automatically clears the threads memory on exit
 
@@ -261,9 +267,16 @@ void *connection(void *sockid) {
     /*
      * Here we handle all of the incoming text from a particular client.
      */
-
+	if((bytes_received = recv(s,buffer,sizeof(buffer),0)) < 0)
+	{
+		close(s);
+	}
+    else
+    {
+        printf("In thread, Bytes received %d\ninthread message: %s\n", bytes_received, buffer);
+    }
     //rc = recv()
-    while (rc > 0)
+    while (bytes_received > 0)
     {
 		//if I received an 'exit' message from this client
 		pthread_mutex_lock(&mutex);

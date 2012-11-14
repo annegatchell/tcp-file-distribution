@@ -15,7 +15,7 @@
 // You may/may not use pthread for the client code. The client is communicating with
 // the server most of the time until he recieves a "GET <file>" request from another client.
 // You can be creative here and design a code similar to the server to handle multiple connections.
-#define PORT "6000"
+// #define PORT "6000"
 #define LOG_FILE "client-log.txt"
 #define MAX_RECEIVE_BUFFER_LENGTH 500
 
@@ -33,12 +33,17 @@ int main(int argc, char *argv[])
     struct addrinfo hints, *servinfo, *p;
     int status; //Error status
     char receive_buffer[MAX_RECEIVE_BUFFER_LENGTH];
+    char * server_ip, *server_port_num, *client_name;
 
 
-    if(argc != 2){
-    	printf("usage is ./client <hostname>\n");
+    if(argc != 4){
+    	printf("usage is ./client <client name> <server ip> <server port #>\n");
     	return 0;
     }
+    server_ip = argv[2];
+    server_port_num = argv[3];
+    client_name = argv[1];
+
 
 //Log the start up time
     gettimeofday(&currTime,NULL);
@@ -55,7 +60,7 @@ int main(int argc, char *argv[])
     hints.ai_family= AF_UNSPEC; //AF_INET or AF_INET6
     hints.ai_socktype = SOCK_STREAM; //TCP stream sockets
 
-    if((status = getaddrinfo(argv[1], PORT, &hints, &servinfo)) != 0){
+    if((status = getaddrinfo(server_ip, server_port_num, &hints, &servinfo)) != 0){
     	fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(status));
     	return 2;
     }	
@@ -82,7 +87,7 @@ int main(int argc, char *argv[])
     }
 
 //
-    char *msg = "Client message!!";
+    char *msg = ("%s,",client_name);
 	int len, bytes_sent;
 	
 	//Send a message to server with name and files list
@@ -102,9 +107,20 @@ int main(int argc, char *argv[])
 		return 2;
 	}
 	else{
-		printf("Bytes received %d\n%s\n", 
+		printf("Bytes received %d\n%s", 
 					bytes_received, receive_buffer);
 	}
+
+	//########## SEND MORE THINGS TO TEST THREADS
+	msg = ("test from %s", client_name);
+	
+	//Send a message to server with name and files list
+	len = strlen(msg);
+	if((bytes_sent = send(sockfd, msg, len, 0)) == -1){
+		perror("send error");
+		return 2;
+	}
+	printf("Bytes sent: %d\n", bytes_sent);
 
 
     return 0;
