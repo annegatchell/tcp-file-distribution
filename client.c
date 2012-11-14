@@ -79,6 +79,16 @@ int main(int argc, char *argv[])
         return 2;
     }
 
+//
+    char *msg = "Client message!!";
+	int len, bytes_sent;
+//Send a message to server
+	len = strlen(msg);
+	if((bytes_sent = send(sockfd, msg, len, 0)) == -1){
+		perror("send error");
+		return 2;
+	}
+	printf("Bytes sent: %d\n", bytes_sent);
 
 
     return 0;

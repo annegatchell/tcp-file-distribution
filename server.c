@@ -16,6 +16,7 @@
 
 #define MAX_CONNECTS 50
 #define LOG_FILE "server-log.txt"
+#define MAX_BUFFER_SIZE 500
 
 /*
  * You should use a globally declared linked list or an array to 
@@ -29,6 +30,20 @@ void *connection(void *);
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 // char logFileName[64];
 
+void sigchld_handler(int s)
+{
+    while(waitpid(-1, NULL, WNOHANG) > 0);
+}
+
+// get sockaddr, IPv4 or IPv6:
+void *get_in_addr(struct sockaddr *sa)
+{
+    if (sa->sa_family == AF_INET) {
+        return &(((struct sockaddr_in*)sa)->sin_addr);
+    }
+
+    return &(((struct sockaddr_in6*)sa)->sin6_addr);
+}
 
 
 int main(int argc,char *argv[])
@@ -53,7 +68,12 @@ int main(int argc,char *argv[])
     new_timeout.tv_sec = 2; //2 secs
     new_timeout.tv_usec = 500000; //0.5 secs
 
-    fd_set read_fds;  // temp file descriptor list for select()
+    fd_set active_fd_set;  // temp file descriptor list for select()
+
+    char receive_buf[MAX_BUFFER_SIZE] = "TEST";
+    int bytes_received;
+
+    char s[INET6_ADDRSTRLEN];
 
 
     //check arguments here
@@ -109,8 +129,8 @@ int main(int argc,char *argv[])
 
    
    
-   	FD_ZERO(&read_fds); //clear the select set
-   	FD_SET(sockfd, &read_fds); //add socket to the listening list
+   	FD_ZERO(&active_fd_set); //clear the select set
+   	FD_SET(sockfd, &active_fd_set); //add socket to the listening list
 	//printf("%d\n",FD_SETSIZE);
     for ( ; ; ) //endless loop
     {
@@ -119,8 +139,7 @@ int main(int argc,char *argv[])
 	//hint:  select()
     //Run select() with no timeout for now, waiting to see if there is
     //a pending connection on the socket waiitng to be accepted with accept
-    	
-	    if (select(sockfd+1, &read_fds, NULL, NULL, NULL) == -1) {
+	    if (select(FD_SETSIZE, &active_fd_set, NULL, NULL, NULL) == -1) {
 	        perror("select");
 	        exit(4);
 	    }
@@ -128,16 +147,40 @@ int main(int argc,char *argv[])
 	    //if someone is trying to connect, you'll have to accept() 
 		//the connection
         //newsockfd = accept(...)
-	    if(FD_ISSET(sockfd, &read_fds)){
-	    	printf("Got a connection!\n");
-	    	newsockfd = accept(sockfd, (struct sockaddr *) &client_addr, &addr_size);
-	    	if(newsockfd < 0){
-	    		perror ("accept");
-                exit (EXIT_FAILURE);
-	    	}
-
-	    }
-
+        int i;
+        for(i = 0; i < FD_SETSIZE; i++){
+        	if(FD_ISSET(i, &active_fd_set)){
+        		//If the connection is on the listening socket
+        		if(i == sockfd){
+			    	printf("Got a connection!\n");
+			    	//Accept the connection
+			    	newsockfd = accept(sockfd, (struct sockaddr *)&client_addr, &addr_size);
+			    	if(newsockfd < 0){
+			    		perror ("accept");
+		                exit (EXIT_FAILURE);
+			    	}
+			    	//add new socket to the listening list
+			    	FD_SET(newsockfd, &active_fd_set);
+			    	inet_ntop(client_addr.ss_family,
+		          				get_in_addr((struct sockaddr *)&client_addr), s, sizeof(s)); 
+			    	printf("server: got connection from %s\n", s);
+	    		}
+	    		else
+                {
+	                /* Data arriving on an already-connected socket. */
+	                if((bytes_received = recv(i,receive_buf,MAX_BUFFER_SIZE,0)) < 0)
+	                {
+	                	close(i);
+	                	FD_CLR (i, &active_fd_set);
+	                }
+	                else{
+		                printf("Bytes received %d\n message %s\n", bytes_received, receive_buf);
+		            }
+                }
+        	}
+        } 
+        return 1;
+    }
 
 	
 	return 1;
@@ -155,14 +198,14 @@ int main(int argc,char *argv[])
 	//that someone else has joined.
 
 
-	pthread_mutex_lock(&mutex);
+	//pthread_mutex_lock(&mutex);
 	//now add your new user to your global list of users
-	pthread_mutex_unlock(&mutex);
+	//pthread_mutex_unlock(&mutex);
 
 	//now you need to start a thread to take care of the 
 	//rest of the messages for that client
-	r = pthread_create(&th, 0, connection, (void *)newsockfd);
-	if (r != 0) { fprintf(stderr, "thread create failed\n"); }
+	//r = pthread_create(&th, 0, connection, (void *)newsockfd);
+	//if (r != 0) { fprintf(stderr, "thread create failed\n"); }
 
 	//A requirement for 5273 students:
 	//at this point...
@@ -172,8 +215,8 @@ int main(int argc,char *argv[])
 	//oh, and notify everyone that they're gone.
 
 
-    }
-    freeaddrinfo(servinfo);
+    //}
+    //freeaddrinfo(servinfo);
 }
 
 
