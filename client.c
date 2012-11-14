@@ -16,6 +16,7 @@
 // the server most of the time until he recieves a "GET <file>" request from another client.
 // You can be creative here and design a code similar to the server to handle multiple connections.
 #define PORT "6000"
+#define LOG_FILE "client-log.txt"
 
 
 int main(int argc, char *argv[])
@@ -42,7 +43,7 @@ int main(int argc, char *argv[])
 	nowtime = currTime.tv_sec;
 	nowtm = localtime(&nowtime);
 	strftime(tmbuf, sizeof (tmbuf), "%Y-%m-%d %H:%M:%S\n", nowtm);
-	char* logFileName = "client-log.txt";
+	char* logFileName = LOG_FILE;
     logFile = fopen(logFileName,"a");
     fprintf(logFile,"Client started at %s\n", tmbuf);
     fclose(logFile);

@@ -15,6 +15,7 @@
 #include <netdb.h>
 
 #define MAX_CONNECTS 50
+#define LOG_FILE "server-log.txt"
 
 /*
  * You should use a globally declared linked list or an array to 
@@ -66,7 +67,7 @@ int main(int argc,char *argv[])
 	nowtime = currTime.tv_sec;
 	nowtm = localtime(&nowtime);
 	strftime(tmbuf, sizeof (tmbuf), "%Y-%m-%d %H:%M:%S\n", nowtm);
-  	char* logFileName = "server-log.txt";
+  	char* logFileName = LOG_FILE;
     logFile = fopen(logFileName,"a");
     fprintf(logFile,"Server started at %s", tmbuf);
     fclose(logFile);
