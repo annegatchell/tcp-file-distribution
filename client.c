@@ -17,6 +17,7 @@
 // You can be creative here and design a code similar to the server to handle multiple connections.
 #define PORT "6000"
 #define LOG_FILE "client-log.txt"
+#define MAX_RECEIVE_BUFFER_LENGTH 500
 
 
 int main(int argc, char *argv[])
@@ -31,6 +32,7 @@ int main(int argc, char *argv[])
     int numBytes;
     struct addrinfo hints, *servinfo, *p;
     int status; //Error status
+    char receive_buffer[MAX_RECEIVE_BUFFER_LENGTH];
 
 
     if(argc != 2){
@@ -82,13 +84,27 @@ int main(int argc, char *argv[])
 //
     char *msg = "Client message!!";
 	int len, bytes_sent;
-//Send a message to server
+	
+	//Send a message to server with name and files list
 	len = strlen(msg);
 	if((bytes_sent = send(sockfd, msg, len, 0)) == -1){
 		perror("send error");
 		return 2;
 	}
 	printf("Bytes sent: %d\n", bytes_sent);
+
+	int bytes_received;
+
+	//Wait for the welcome response and hashtable
+	if((bytes_received = recv(sockfd,receive_buffer,
+			MAX_RECEIVE_BUFFER_LENGTH,0)) == -1){
+		perror("receive error");
+		return 2;
+	}
+	else{
+		printf("Bytes received %d\n%s\n", 
+					bytes_received, receive_buffer);
+	}
 
 
     return 0;

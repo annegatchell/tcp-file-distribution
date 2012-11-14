@@ -74,6 +74,7 @@ int main(int argc,char *argv[])
     int bytes_received;
 
     char s[INET6_ADDRSTRLEN];
+    int yes=1;
 
 
     //check arguments here
@@ -113,6 +114,15 @@ int main(int argc,char *argv[])
             perror("Server could not set up socket\n");
             continue;
         }
+    /*
+    *	Get rid of any pesky leftover sockets
+    */
+    if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &yes,
+                sizeof(int)) == -1) {
+            perror("setsockopt");
+            exit(1);
+    }
+
      /*
      * Bind our local address so that the client can send to us.
      */
@@ -165,7 +175,12 @@ int main(int argc,char *argv[])
 		          				get_in_addr((struct sockaddr *)&client_addr), s, sizeof(s)); 
 			    	printf("server: got connection from %s\n", s);
 	    		}
-	    		else
+	    		//#########-> Need to differentiate between the new members and the existing ones
+	    		else if(i == newsockfd)
+	    		//if you've accepted the connection, you'll probably want to
+				//check "select()" to see if they're trying to send data, 
+			    //like their name, and if so
+				//recv() whatever they're trying to send
                 {
 	                /* Data arriving on an already-connected socket. */
 	                if((bytes_received = recv(i,receive_buf,MAX_BUFFER_SIZE,0)) < 0)
@@ -175,7 +190,44 @@ int main(int argc,char *argv[])
 	                }
 	                else{
 		                printf("Bytes received %d\n message %s\n", bytes_received, receive_buf);
+		            //########################
+		            // This is the point where you should save the files in the hashtable
+		            //########################
+
+		            //since you're talking nicely now.. probably a good idea send them
+					//a message to welcome them to the service.
+		            char* welcome_msg = "Welcome to the File Sharing System\n";
+		            int len, bytes_sent;
+		            len = strlen(welcome_msg);
+		            if((bytes_sent = send(i, welcome_msg, len, 0)) == -1){
+		            	perror("send error");
+		            	return 2;
 		            }
+		            printf("Sent welcome: Bytes sent: %d\n", bytes_sent);
+
+		            //if there are others connected to the server, probably good to notify them
+					//that someone else has joined.
+
+
+					pthread_mutex_lock(&mutex);
+					//now add your new user to your global list of users
+					pthread_mutex_unlock(&mutex);
+
+					//now you need to start a thread to take care of the 
+					//rest of the messages for that client
+					r = pthread_create(&th, 0, connection, (void *)i);
+					if (r != 0) { fprintf(stderr, "thread create failed\n"); }
+
+					//A requirement for 5273 students:
+					//at this point...
+					//whether or not someone connected, you should probably
+					//look for clients that should be timed out
+					//and kick them out
+					//oh, and notify everyone that they're gone.
+		            }
+                }
+                else{
+                	printf("LAST ELSE\n");
                 }
         	}
         } 
@@ -185,35 +237,7 @@ int main(int argc,char *argv[])
 	
 	return 1;
 	
-
-	//if you've accepted the connection, you'll probably want to
-	//check "select()" to see if they're trying to send data, 
-        //like their name, and if so
-	//recv() whatever they're trying to send
-
-	//since you're talking nicely now.. probably a good idea send them
-	//a message to welcome them to the new client.
-
-	//if there are others connected to the server, probably good to notify them
-	//that someone else has joined.
-
-
-	//pthread_mutex_lock(&mutex);
-	//now add your new user to your global list of users
-	//pthread_mutex_unlock(&mutex);
-
-	//now you need to start a thread to take care of the 
-	//rest of the messages for that client
-	//r = pthread_create(&th, 0, connection, (void *)newsockfd);
-	//if (r != 0) { fprintf(stderr, "thread create failed\n"); }
-
-	//A requirement for 5273 students:
-	//at this point...
-	//whether or not someone connected, you should probably
-	//look for clients that should be timed out
-	//and kick them out
-	//oh, and notify everyone that they're gone.
-
+	
 
     //}
     //freeaddrinfo(servinfo);
@@ -233,7 +257,7 @@ void *connection(void *sockid) {
 
     pthread_detach(pthread_self());  //automatically clears the threads memory on exit
 
-
+    printf("A THREAD OMG %d\n", s);
     /*
      * Here we handle all of the incoming text from a particular client.
      */
@@ -241,27 +265,27 @@ void *connection(void *sockid) {
     //rc = recv()
     while (rc > 0)
     {
-	//if I received an 'exit' message from this client
-	pthread_mutex_lock(&mutex);
-	//remove myself from the vector of active clients
-	pthread_mutex_unlock(&mutex);
-	pthread_exit(NULL);
-	printf("Shouldn't see this!\n");
-	
-	
-	//A requirement for 5273 students:
-    //if I received a new files list from this client, the
-	//server must “Push”/send the new updated hash table to all clients it is connected to.
-	
-	
-	//loop through global client list and
-	//e =write(..);  
-	if (e == -1) //broken pipe.. someone has left the room
-	{
-	    pthread_mutex_lock(&mutex);
-	    //so remove them from our list
-	    pthread_mutex_unlock(&mutex);
-	}
+		//if I received an 'exit' message from this client
+		pthread_mutex_lock(&mutex);
+		//remove myself from the vector of active clients
+		pthread_mutex_unlock(&mutex);
+		pthread_exit(NULL);
+		printf("Shouldn't see this!\n");
+		
+		
+		//A requirement for 5273 students:
+	    //if I received a new files list from this client, the
+		//server must “Push”/send the new updated hash table to all clients it is connected to.
+		
+		
+		//loop through global client list and
+		//e =write(..);  
+		if (e == -1) //broken pipe.. someone has left the room
+		{
+		    pthread_mutex_lock(&mutex);
+		    //so remove them from our list
+		    pthread_mutex_unlock(&mutex);
+		}
 	
     }
 
