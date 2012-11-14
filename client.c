@@ -32,8 +32,8 @@ int main(int argc, char *argv[])
     int status; //Error status
 
 
-    if(argc != 3){
-    	printf("usage is ./client <hostname> <logfile>\n");
+    if(argc != 2){
+    	printf("usage is ./client <hostname>\n");
     	return 0;
     }
 
@@ -42,7 +42,7 @@ int main(int argc, char *argv[])
 	nowtime = currTime.tv_sec;
 	nowtm = localtime(&nowtime);
 	strftime(tmbuf, sizeof (tmbuf), "%Y-%m-%d %H:%M:%S\n", nowtm);
-	char* logFileName = argv[2];
+	char* logFileName = "client-log.txt";
     logFile = fopen(logFileName,"a");
     fprintf(logFile,"Client started at %s\n", tmbuf);
     fclose(logFile);

@@ -56,8 +56,8 @@ int main(int argc,char *argv[])
 
 
     //check arguments here
-    if (argc != 3)  {
-		printf("usage is: ./pserver <port#> <logFile>\n");
+    if (argc != 2)  {
+		printf("usage is: ./pserver <port#>\n");
 		return 0;
     }
 
@@ -66,7 +66,7 @@ int main(int argc,char *argv[])
 	nowtime = currTime.tv_sec;
 	nowtm = localtime(&nowtime);
 	strftime(tmbuf, sizeof (tmbuf), "%Y-%m-%d %H:%M:%S\n", nowtm);
-  	char* logFileName = argv[2];
+  	char* logFileName = "server-log.txt";
     logFile = fopen(logFileName,"a");
     fprintf(logFile,"Server started at %s", tmbuf);
     fclose(logFile);
