@@ -12,9 +12,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/time.h>
-#include <stdlib.h>
 #include <netdb.h>
-#include <string.h>
 
 #define MAX_CONNECTS 50
 
@@ -44,19 +42,26 @@ int main(int argc,char *argv[])
     FILE *logFile;
     int sockfd, newsockfd = 0; //Listen on sockfd, new connection on newsockfd
     struct addrinfo hints, *servinfo, *p; //servinfo points to results
-    struct sockaddr_storage their_addr; //Connector's address information
-    socklen_t sin_size;
+    struct sockaddr_storage client_addr; //Connector's address information
+    socklen_t addr_size;
     struct sigaction sa;
     int status; //The error status
-    int BACKLOG = 10; //Number of clients allowed in queue
+    int BACKLOG = 1; //Number of clients allowed in queue
+
+    struct timeval new_timeout; //The default timeout we are using for the select()
+    new_timeout.tv_sec = 2; //2 secs
+    new_timeout.tv_usec = 500000; //0.5 secs
+
+    fd_set read_fds;  // temp file descriptor list for select()
 
 
     //check arguments here
     if (argc != 3)  {
-		printf("usage is: ./pserver <port#><logFile>\n");
+		printf("usage is: ./pserver <port#> <logFile>\n");
 		return 0;
     }
 
+//Log the startup time
     gettimeofday(&currTime,NULL);
 	nowtime = currTime.tv_sec;
 	nowtm = localtime(&nowtime);
@@ -67,11 +72,11 @@ int main(int argc,char *argv[])
     fclose(logFile);
 
     //Set up the 
-    memset(&hints, 0, sizeof hints);
+    memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_UNSPEC; // AF_INET or AF_INET6 to force version
     hints.ai_socktype = SOCK_STREAM; //TCP stream sockets
     hints.ai_flags = AI_PASSIVE;     //fill in my IP for me
-
+ 
     if ((status = getaddrinfo(NULL, argv[1], &hints, &servinfo)) != 0) {
         fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(status));
         return 2;
@@ -101,26 +106,41 @@ int main(int argc,char *argv[])
      	}
     }
 
-    return 1;
-    
-
-
    
-
-
-    
-
+   
+   	FD_ZERO(&read_fds); //clear the select set
+   	FD_SET(sockfd, &read_fds); //add socket to the listening list
+	//printf("%d\n",FD_SETSIZE);
     for ( ; ; ) //endless loop
     {
-    
-
-	//now that you're listening, check to see if anyone is trying 
+    //now that you're listening, check to see if anyone is trying 
 	//to connect
 	//hint:  select()
+    //Run select() with no timeout for now, waiting to see if there is
+    //a pending connection on the socket waiitng to be accepted with accept
+    	
+	    if (select(sockfd+1, &read_fds, NULL, NULL, NULL) == -1) {
+	        perror("select");
+	        exit(4);
+	    }
 
-	//if someone is trying to connect, you'll have to accept() 
-	//the connection
+	    //if someone is trying to connect, you'll have to accept() 
+		//the connection
         //newsockfd = accept(...)
+	    if(FD_ISSET(sockfd, &read_fds)){
+	    	printf("Got a connection!\n");
+	    	newsockfd = accept(sockfd, (struct sockaddr *) &client_addr, &addr_size);
+	    	if(newsockfd < 0){
+	    		perror ("accept");
+                exit (EXIT_FAILURE);
+	    	}
+
+	    }
+
+
+	
+	return 1;
+	
 
 	//if you've accepted the connection, you'll probably want to
 	//check "select()" to see if they're trying to send data, 
