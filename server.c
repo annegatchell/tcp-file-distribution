@@ -23,12 +23,17 @@
  * keep track of your connections.  Be sure to manage either properly
  */
 
+
+
+
 //thread function declaration
-void *connection(void *);
+//void *connection(void *);
 
 //global variables
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 // char logFileName[64];
+
+
 
 void sigchld_handler(int s)
 {
@@ -45,6 +50,7 @@ void *get_in_addr(struct sockaddr *sa)
 	printf("INET6\n");
     return &(((struct sockaddr_in6*)sa)->sin6_addr);
 }
+
 
 
 int main(int argc,char *argv[])
@@ -216,11 +222,12 @@ int main(int argc,char *argv[])
 
 						//now you need to start a thread to take care of the 
 						//rest of the messages for that client
-						r = pthread_create(&th, NULL, &connection, (void *)i);
-						if (r != 0) { fprintf(stderr, "thread create failed\n"); }
+						//r = pthread_create(&th, NULL, &connection, (void *)i);
+						//if (r != 0) { fprintf(stderr, "thread create failed\n"); }
 
 						//Get this guy off the select list, since the thread is watching now
-						FD_CLR (i, &active_fd_set);
+						//FD_CLR (i, &active_fd_set);
+						
 						//A requirement for 5273 students:
 						//at this point...
 						//whether or not someone connected, you should probably
@@ -252,7 +259,7 @@ int main(int argc,char *argv[])
 
 
 
-//-----------------------------------------------------------------------------
+/*//-----------------------------------------------------------------------------
 void *connection(void *sockid) {
     int s = (int)sockid;
 
@@ -264,9 +271,12 @@ void *connection(void *sockid) {
     pthread_detach(pthread_self());  //automatically clears the threads memory on exit
 
     printf("A THREAD OMG %d\n", s);
-    /*
-     * Here we handle all of the incoming text from a particular client.
-     */
+   
+    // Here we handle all of the incoming text from a particular client.
+    
+    for(;;){
+    	    	//printf("for\n");
+
 	if((bytes_received = recv(s,buffer,sizeof(buffer),0)) < 0)
 	{
 		close(s);
@@ -276,15 +286,16 @@ void *connection(void *sockid) {
         printf("In thread, Bytes received %d\ninthread message: %s\n", bytes_received, buffer);
     }
     //rc = recv()
-    while (bytes_received > 0)
+    if (bytes_received > 0)
     {
-		//if I received an 'exit' message from this client
+    	//printf("here\n");
+		if(0){// I received an 'exit' message from this client
 		pthread_mutex_lock(&mutex);
 		//remove myself from the vector of active clients
 		pthread_mutex_unlock(&mutex);
 		pthread_exit(NULL);
 		printf("Shouldn't see this!\n");
-		
+		}
 		
 		//A requirement for 5273 students:
 	    //if I received a new files list from this client, the
@@ -301,7 +312,8 @@ void *connection(void *sockid) {
 		}
 	
     }
+	}
 
     //should probably never get here
     return 0;
-}
+} */

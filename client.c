@@ -87,7 +87,7 @@ int main(int argc, char *argv[])
     }
 
 //
-    char *msg = ("%s,",client_name);
+    char *msg = client_name;
 	int len, bytes_sent;
 	
 	//Send a message to server with name and files list
@@ -112,15 +112,21 @@ int main(int argc, char *argv[])
 	}
 
 	//########## SEND MORE THINGS TO TEST THREADS
-	msg = ("test from %s", client_name);
 	
+	int i;
 	//Send a message to server with name and files list
-	len = strlen(msg);
-	if((bytes_sent = send(sockfd, msg, len, 0)) == -1){
-		perror("send error");
-		return 2;
+	char msg2[100];
+	for(i = 0; i < 20; i++){
+		sprintf(msg2,"test %d from %s", i, client_name);
+		len = strlen(msg2);
+		printf("%s\n", msg2);
+		if((bytes_sent = send(sockfd, msg2, len, 0)) == -1){
+			perror("send error");
+			return 2;
+		}
+		printf("Bytes sent: %d\n", bytes_sent);
 	}
-	printf("Bytes sent: %d\n", bytes_sent);
+	
 
 
     return 0;
