@@ -22,22 +22,75 @@
  * You should use a globally declared linked list or an array to 
  * keep track of your connections.  Be sure to manage either properly
  */
+struct clientListEntry{
+	int sock_num;
+	char* client_name;
+	struct clientListEntry *next;
+};
 
+struct clientList
+{
+	struct clientListEntry *first;
+	//after_last points to the same place as the next pointer of the last entry
+	struct clientListEntry *after_last;  
+};
 
-
+struct clientList clients = {0, 0};
+fd_set active_fd_set;  // temp file descriptor list for select()
+int sockfd, newsockfd = 0; //Listen on sockfd, new connection on newsockfd
 
 //thread function declaration
 //void *connection(void *);
 
 //global variables
-pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+//pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 // char logFileName[64];
 
+
+int getClientFromSocket(int s, struct clientListEntry *client){
+	struct clientListEntry *current;
+	if(clients.first != 0){
+		current = clients.first;
+		while(current != 0){
+			if (s == current->sock_num){
+				client = current;
+				return 1;
+			}
+			else{
+				printf("clients %s\n",clients.first->client_name);
+				current = current->next;
+			}
+		}
+	}
+	printf("clients %s\n",clients.first->client_name);
+	return -1;
+}
 
 
 void sigchld_handler(int s)
 {
     while(waitpid(-1, NULL, WNOHANG) > 0);
+}
+
+void build_select_list(){
+	FD_ZERO(&active_fd_set);
+	FD_SET(sockfd, &active_fd_set);
+
+	if(newsockfd != 0){
+		printf("new sock fd %d\n", newsockfd);
+		FD_SET(newsockfd, &active_fd_set);
+	}
+
+	struct clientListEntry *current;
+	if(clients.first != 0){
+		current = clients.first;
+		while(current != 0){
+			if(current->sock_num != 0){
+				FD_SET(current->sock_num, &active_fd_set);
+				current = current->next;
+			}
+		}
+	}
 }
 
 // get sockaddr, IPv4 or IPv6:
@@ -60,14 +113,12 @@ int main(int argc,char *argv[])
     time_t nowtime;
     struct tm *nowtm;
     char tmbuf[64];
-    pthread_t th;
-    int r;
     FILE *logFile;
-    int sockfd, newsockfd = 0; //Listen on sockfd, new connection on newsockfd
+    
     struct addrinfo hints, *servinfo, *p; //servinfo points to results
     struct sockaddr_storage client_addr; //Connector's address information
     socklen_t addr_size;
-    struct sigaction sa;
+    
     int status; //The error status
     int BACKLOG = 1; //Number of clients allowed in queue
 
@@ -75,7 +126,7 @@ int main(int argc,char *argv[])
     new_timeout.tv_sec = 2; //2 secs
     new_timeout.tv_usec = 500000; //0.5 secs
 
-    fd_set active_fd_set;  // temp file descriptor list for select()
+    
 
     char receive_buf[MAX_BUFFER_SIZE] = "TEST";
     int bytes_received;
@@ -146,8 +197,10 @@ int main(int argc,char *argv[])
 
    
    
-   	FD_ZERO(&active_fd_set); //clear the select set
-   	FD_SET(sockfd, &active_fd_set); //add socket to the listening list
+   	// FD_ZERO(&active_fd_set); //clear the select set
+   	// FD_SET(sockfd, &active_fd_set); //add socket to the listening list
+   	struct clientListEntry *current_client;
+   	struct clientListEntry *new_client;
 	//printf("%d\n",FD_SETSIZE);
     for ( ; ; ) //endless loop
     {
@@ -156,6 +209,8 @@ int main(int argc,char *argv[])
 	//hint:  select()
     //Run select() with no timeout for now, waiting to see if there is
     //a pending connection on the socket waiitng to be accepted with accept
+    	build_select_list();
+
 	    if (select(FD_SETSIZE, &active_fd_set, NULL, NULL, NULL) == -1) {
 	        perror("select");
 	        exit(4);
@@ -165,10 +220,12 @@ int main(int argc,char *argv[])
 		//the connection
         //newsockfd = accept(...)
         int i;
-        for(i = 0; i < FD_SETSIZE; i++){
-        	if(FD_ISSET(i, &active_fd_set)){
+        // for(i = 0; i < FD_SETSIZE; i++){
+        	// if(FD_ISSET(i, &active_fd_set)){
+        		
         		//If the connection is on the listening socket
-        		if(i == sockfd){
+        		if(FD_ISSET(sockfd, &active_fd_set)){
+        		// if(i == sockfd){
 			    	printf("Got a connection!\n");
 			    	//Accept the connection
 			    	newsockfd = accept(sockfd, (struct sockaddr *)&client_addr, &addr_size);
@@ -177,48 +234,68 @@ int main(int argc,char *argv[])
 		                exit (EXIT_FAILURE);
 			    	}
 			    	//add new socket to the listening list
-			    	FD_SET(newsockfd, &active_fd_set);
+			    	//FD_SET(newsockfd, &active_fd_set);
 			    	inet_ntop(client_addr.ss_family,
 		          				get_in_addr((struct sockaddr *)&client_addr), s, sizeof(s)); 
 			    	printf("server: got connection from %s\n", s);
 	    		}
-	    		//#########-> Need to differentiate between the new members and the existing ones
-	    		else if(i == newsockfd)
+	    		//This is the branch for brand new clients
+	    		else if(FD_ISSET(newsockfd, &active_fd_set))
+	    		// else if(i == newsockfd)
 	    		//if you've accepted the connection, you'll probably want to
 				//check "select()" to see if they're trying to send data, 
 			    //like their name, and if so
 				//recv() whatever they're trying to send
                 {
 	                /* Data arriving on an already-connected socket. */
-	                if((bytes_received = recv(i,receive_buf,MAX_BUFFER_SIZE,0)) < 0)
+	                if((bytes_received = recv(newsockfd,receive_buf,MAX_BUFFER_SIZE,0)) < 0)
 	                {
-	                	close(i);
-	                	FD_CLR (i, &active_fd_set);
+	                	close(newsockfd);
+	                	FD_CLR (newsockfd, &active_fd_set);
 	                }
 	                else{
 		                printf("Bytes received %d\nmessage %s\n", bytes_received, receive_buf);
 			            //########################
 			            // This is the point where you should save the files in the hashtable
+			            // and add the client name to the list of clients
 			            //########################
+		                //new_client = {i, receive_buf, NULL};
+		              
+		                clients.after_last = malloc(sizeof(struct clientListEntry));
+		                //clients.last->next = new_client;//malloc(sizeof(struct clientListEntry));
+		                clients.after_last->sock_num = newsockfd;
+		                clients.after_last->client_name = receive_buf;
+		                clients.after_last->next = 0;
+		                if(clients.first == 0){
+		                	clients.first = clients.after_last;
+		                }
+		                clients.after_last = clients.after_last->next;
 
 			            //since you're talking nicely now.. probably a good idea send them
 						//a message to welcome them to the service.
 			            char* welcome_msg = "Welcome to the File Sharing System\n";
 			            int len, bytes_sent;
 			            len = strlen(welcome_msg);
-			            if((bytes_sent = send(i, welcome_msg, len, 0)) == -1){
+			            if((bytes_sent = send(newsockfd, welcome_msg, len, 0)) == -1){
 			            	perror("send error");
 			            	return 2;
 			            }
 			            printf("Sent welcome: Bytes sent: %d\n", bytes_sent);
 
+
+			            //reset the newsockfd to 0, so that we don't keep coming to this branch for
+			            //this client
+			            newsockfd = 0;
+
+
+
 			            //if there are others connected to the server, probably good to notify them
 						//that someone else has joined.
 
 
-						pthread_mutex_lock(&mutex);
+						//pthread_mutex_lock(&mutex);
 						//now add your new user to your global list of users
-						pthread_mutex_unlock(&mutex);
+						//pthread_mutex_unlock(&mutex);
 
 						//now you need to start a thread to take care of the 
 						//rest of the messages for that client
@@ -235,14 +312,17 @@ int main(int argc,char *argv[])
 						//and kick them out
 						//oh, and notify everyone that they're gone.
 		            }
-
-
                 }
-                else{
-                	printf("WHAT DO I DO HERE?\n");
-                }
-        	}
-        }
+
+                // else if(getClientFromSocket(i, current_client) != -1){
+                // 	//printf("WHAT DO I DO HERE?\n");
+                // }
+                // else{
+
+                // 	continue;
+                // }
+        	// }
+        // }
     }
 
 	
