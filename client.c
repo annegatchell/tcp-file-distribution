@@ -116,7 +116,7 @@ int main(int argc, char *argv[])
 	int i;
 	//Send a message to server with name and files list
 	char msg2[100];
-	for(i = 0; i < 1; i++){
+	for(i = 0; i < 20; i++){
 		sprintf(msg2,"test %d from %s", i, client_name);
 		len = strlen(msg2);
 		printf("%s\n", msg2);
@@ -124,7 +124,16 @@ int main(int argc, char *argv[])
 			perror("send error");
 			return 2;
 		}
-		printf("Bytes sent: %d\n", bytes_sent);
+		// printf("Bytes sent: %d\n", bytes_sent);
+		if((bytes_received = recv(sockfd,receive_buffer,
+			MAX_RECEIVE_BUFFER_LENGTH,0)) == -1){
+		perror("receive error");
+		return 2;
+		}
+		else{
+			// printf("Bytes received %d\n%s", 
+			// 			bytes_received, receive_buffer);
+		}
 	}
 	
 

@@ -97,6 +97,7 @@ void handle_data(struct clientListEntry *client){
 	// printf("HANDLING THE DATA\n");
 	char buffer[1024];
 	int bytes_received;
+	memset(&buffer, 0, sizeof(buffer));
 	if((bytes_received = recv(client->sock_num,buffer,sizeof(buffer),0)) < 0)
     {
     	close(client->sock_num);
@@ -109,7 +110,14 @@ void handle_data(struct clientListEntry *client){
     else
     {
         printf("Bytes received %d\nmessage %s\n", bytes_received, buffer);
-        
+        char* msg = "got cha msg, foo\n";
+        int len, bytes_sent;
+        len = strlen(msg);
+        if((bytes_sent = send(client->sock_num, msg, len, 0)) == -1){
+        	perror("send error");
+        	return 2;
+        }
+        printf("Sent welcome: Bytes sent: %d\n", bytes_sent);
     }
 			            
 }
@@ -123,7 +131,6 @@ void check_existing_connections(){
 				if(FD_ISSET(current->sock_num, &active_fd_set)){
 					handle_data(current);
 				}
-				
 				current = current->next;
 			}
 		}
@@ -247,16 +254,18 @@ int main(int argc,char *argv[])
     //Run select() with no timeout for now, waiting to see if there is
     //a pending connection on the socket waiitng to be accepted with accept
     	build_select_list();
-
-	    if ((readsocks = select(FD_SETSIZE, &active_fd_set, NULL, NULL, NULL)) == -1) {
+	    if ((readsocks = select(FD_SETSIZE, &active_fd_set, (fd_set*) 0, (fd_set*) 0, NULL)) == -1) {
 	        perror("select");
 	        exit(4);
 	    }
 	    else if(readsocks == 0){
 	    	printf("Nothing to read\n");
+	    	
 	    }
 	    else{
-	    	// printf("readsocks %d\n", readsocks);
+	    	printf("HERE!!!\n");
+	    	printf("readsocks %d\n", readsocks);
+
 	    //if someone is trying to connect, you'll have to accept() 
 		//the connection
         //newsockfd = accept(...)
