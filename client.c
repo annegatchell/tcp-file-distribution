@@ -33,6 +33,29 @@ void update_list_of_files(FILE *fileListFile, char files[][80], char* log_file_n
 
 }
 
+void get_printable_time(struct timeval *time_, char* tmbuf, size_t size){
+    time_t nowtime;
+    struct tm *nowtm;
+    //char tmbuf[64];
+    nowtime = time_->tv_sec;
+    nowtm = localtime(&nowtime);
+    strftime(tmbuf, size, "%Y-%m-%d %H:%M:%S", nowtm);
+}
+
+void print_to_log(char* stmt){
+    FILE *logFile;
+    char* logFileName = LOG_FILE;
+    //Get current time of day
+    struct timeval currTime;
+    gettimeofday(&currTime,NULL);
+    char tmbuf[64];
+    //Open file and print string plus time of day
+    logFile = fopen(logFileName,"a");
+    get_printable_time(&currTime,tmbuf,sizeof(tmbuf));
+    fprintf(logFile,"%s | %s\n",stmt,tmbuf);
+    fclose(logFile);
+}
+
 int main(int argc, char *argv[])
 
 {
@@ -62,28 +85,18 @@ int main(int argc, char *argv[])
     client_name = argv[1];
     log_file_name  = argv[4];
     //Get the list of files
-    update_list_of_files(&fileListFile, files, argv[4]);
-    // fileListFile = fopen(log_file_name, "rt");
-    // int i = 0;
-    // while(fgets(line, 80, fileListFile) != NULL){
-    // 	sscanf(line, "%s",files[i]);
-    // 	printf("HERE\n");
-    // 	printf("%s\n", files[i]);
-    // 	i++;
-    // }
-
-
-
+    update_list_of_files(fileListFile, files, argv[4]);
 
 //Log the start up time
-    gettimeofday(&currTime,NULL);
-	nowtime = currTime.tv_sec;
-	nowtm = localtime(&nowtime);
-	strftime(tmbuf, sizeof (tmbuf), "%Y-%m-%d %H:%M:%S\n", nowtm);
-	char* logFileName = LOG_FILE;
-    logFile = fopen(logFileName,"a");
-    fprintf(logFile,"Client started at %s\n", tmbuf);
-    fclose(logFile);
+ //    gettimeofday(&currTime,NULL);
+	// nowtime = currTime.tv_sec;
+	// nowtm = localtime(&nowtime);
+	// strftime(tmbuf, sizeof (tmbuf), "%Y-%m-%d %H:%M:%S\n", nowtm);
+	// char* logFileName = LOG_FILE;
+ //    logFile = fopen(logFileName,"a");
+ //    fprintf(logFile,"Client started at %s\n", tmbuf);
+ //    fclose(logFile);
+    print_to_log("Client started at ");
 
 //Set up the address struct
     memset(&hints, 0, sizeof(hints));
