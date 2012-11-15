@@ -20,12 +20,15 @@
 #define MAX_RECEIVE_BUFFER_LENGTH 500
 
 
-void update_list_of_files(FILE *fileListFile, char files[][80], char* log_file_name){
+void update_list_of_files(FILE *fileListFile, char files[][80], char* log_file_name, char files_name_string[]){
     char line[80];
     fileListFile = fopen(log_file_name, "rt");
     int i = 0;
+    int z = 0;
     while(fgets(line, 80, fileListFile) != NULL){
         sscanf(line, "%s",files[i]);
+        sscanf(line, "%s",&files_name_string[z]);
+        z += sizeof(line);
         printf("HERE\n");
         printf("%s\n", files[i]);
         i++;
@@ -51,6 +54,7 @@ int main(int argc, char *argv[])
     FILE *fileListFile;
     char line[80];
     char files[20][80];
+    char files_name_string[20*80];
 
 
     if(argc != 5){
@@ -62,7 +66,8 @@ int main(int argc, char *argv[])
     client_name = argv[1];
     log_file_name  = argv[4];
     //Get the list of files
-    update_list_of_files(&fileListFile, files, argv[4]);
+    update_list_of_files(fileListFile, files, argv[4], files_name_string);
+    printf("%s\n", files_name_string);
     // fileListFile = fopen(log_file_name, "rt");
     // int i = 0;
     // while(fgets(line, 80, fileListFile) != NULL){
@@ -117,7 +122,9 @@ int main(int argc, char *argv[])
     }
 
 //
-    char *msg = client_name;
+    char *msg = malloc(sizeof(client_name) + sizeof("\n") + sizeof(files));
+    msg = strcat(client_name, "\n");
+    msg = strcat(msg, files_name_string);
 	int len, bytes_sent;
 	
 	//Send a message to server with name and files list
@@ -147,7 +154,7 @@ int main(int argc, char *argv[])
 	//Send a message to server with name and files list
     int i;
 	char msg2[100];
-	for(i = 0; i < 20; i++){
+	for(i = 0; i < 0; i++){
 		sprintf(msg2,"test %d from %s", i, client_name);
 		len = strlen(msg2);
 		printf("%s\n", msg2);
