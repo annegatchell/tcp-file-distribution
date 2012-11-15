@@ -20,17 +20,18 @@
 #define MAX_RECEIVE_BUFFER_LENGTH 500
 
 
-// void update_list_of_files(char files[][80], char* log_file_name){
-//     fileListFile = fopen(log_file_name, "rt");
-//     int i = 0;
-//     while(fgets(line, 80, fileListFile) != NULL){
-//         sscanf(line, "%s",files[i]);
-//         printf("HERE\n");
-//         printf("%s\n", files[i]);
-//         i++;
-//     }
+void update_list_of_files(FILE *fileListFile, char files[][80], char* log_file_name){
+    char line[80];
+    fileListFile = fopen(log_file_name, "rt");
+    int i = 0;
+    while(fgets(line, 80, fileListFile) != NULL){
+        sscanf(line, "%s",files[i]);
+        printf("HERE\n");
+        printf("%s\n", files[i]);
+        i++;
+    }
 
-// }
+}
 
 int main(int argc, char *argv[])
 
@@ -61,14 +62,15 @@ int main(int argc, char *argv[])
     client_name = argv[1];
     log_file_name  = argv[4];
     //Get the list of files
-    fileListFile = fopen(log_file_name, "rt");
-    int i = 0;
-    while(fgets(line, 80, fileListFile) != NULL){
-    	sscanf(line, "%s",files[i]);
-    	printf("HERE\n");
-    	printf("%s\n", files[i]);
-    	i++;
-    }
+    update_list_of_files(&fileListFile, files, argv[4]);
+    // fileListFile = fopen(log_file_name, "rt");
+    // int i = 0;
+    // while(fgets(line, 80, fileListFile) != NULL){
+    // 	sscanf(line, "%s",files[i]);
+    // 	printf("HERE\n");
+    // 	printf("%s\n", files[i]);
+    // 	i++;
+    // }
 
 
 
@@ -143,6 +145,7 @@ int main(int argc, char *argv[])
 	
 	
 	//Send a message to server with name and files list
+    int i;
 	char msg2[100];
 	for(i = 0; i < 20; i++){
 		sprintf(msg2,"test %d from %s", i, client_name);
