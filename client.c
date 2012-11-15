@@ -27,10 +27,10 @@ void update_list_of_files(FILE *fileListFile, char files[][80], char* log_file_n
     int z = 0;
     while(fgets(line, 80, fileListFile) != NULL){
         sscanf(line, "%s",files[i]);
-        sscanf(line, "%s",&files_name_string[z]);
+        printf("%d\n", z);
+        strcat(files_name_string, line);
         z += sizeof(line);
-        printf("HERE\n");
-        printf("%s\n", files[i]);
+        //printf("%s\n", files[i]);
         i++;
     }
 
