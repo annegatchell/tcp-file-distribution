@@ -115,7 +115,6 @@ void handle_data(struct clientListEntry *client){
         len = strlen(msg);
         if((bytes_sent = send(client->sock_num, msg, len, 0)) == -1){
         	perror("send error");
-        	return 2;
         }
         printf("Sent welcome: Bytes sent: %d\n", bytes_sent);
     }
@@ -382,6 +381,7 @@ int main(int argc,char *argv[])
 
     //}
     freeaddrinfo(servinfo);
+
     return 0;
 }
 

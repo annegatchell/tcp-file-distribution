@@ -16,13 +16,14 @@
 // the server most of the time until he recieves a "GET <file>" request from another client.
 // You can be creative here and design a code similar to the server to handle multiple connections.
 // #define PORT "6000"
-#define LOG_FILE "client-log.txt"
+char* client_name;
+char* LOG_FILE; //"client-log.txt";
 #define MAX_RECEIVE_BUFFER_LENGTH 500
 
 
-void update_list_of_files(FILE *fileListFile, char files[][80], char* log_file_name){
+void update_list_of_files(FILE *fileListFile, char files[][80], char* file_list_name){
     char line[80];
-    fileListFile = fopen(log_file_name, "rt");
+    fileListFile = fopen(file_list_name, "rt");
     int i = 0;
     while(fgets(line, 80, fileListFile) != NULL){
         sscanf(line, "%s",files[i]);
@@ -59,20 +60,14 @@ void print_to_log(char* stmt){
 int main(int argc, char *argv[])
 
 {
-	struct timeval currTime;
-	time_t nowtime;
-    struct tm *nowtm;
-    char tmbuf[64];
-    FILE *logFile;
     int sockfd; //connect to server on sockfd
     int numBytes;
     struct addrinfo hints, *servinfo, *p;
     int status; //Error status
     char receive_buffer[MAX_RECEIVE_BUFFER_LENGTH];
-    char * server_ip, *server_port_num, *client_name, *log_file_name;
+    char * server_ip, *server_port_num, *file_list_name;
 
     FILE *fileListFile;
-    char line[80];
     char files[20][80];
 
 
@@ -83,19 +78,12 @@ int main(int argc, char *argv[])
     server_ip = argv[2];
     server_port_num = argv[3];
     client_name = argv[1];
-    log_file_name  = argv[4];
-    //Get the list of files
+    file_list_name  = argv[4];
+    LOG_FILE = malloc(sizeof(argv[1]) + sizeof("-client-log.txt"));
+    LOG_FILE = strcat(client_name, "-client-log.txt");
+//Get the list of files
     update_list_of_files(fileListFile, files, argv[4]);
-
-//Log the start up time
- //    gettimeofday(&currTime,NULL);
-	// nowtime = currTime.tv_sec;
-	// nowtm = localtime(&nowtime);
-	// strftime(tmbuf, sizeof (tmbuf), "%Y-%m-%d %H:%M:%S\n", nowtm);
-	// char* logFileName = LOG_FILE;
- //    logFile = fopen(logFileName,"a");
- //    fprintf(logFile,"Client started at %s\n", tmbuf);
- //    fclose(logFile);
+//Log start time
     print_to_log("Client started at ");
 
 //Set up the address struct
