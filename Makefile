@@ -12,4 +12,4 @@ server: server.o
 	${CC} ${CFLAGS} -lpthread -o $@ server.o
 
 clean:
-	rm *.o client server ${LOGS}
+	rm *.o client server *${LOGS}
