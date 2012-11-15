@@ -20,6 +20,18 @@
 #define MAX_RECEIVE_BUFFER_LENGTH 500
 
 
+// void update_list_of_files(char files[][80], char* log_file_name){
+//     fileListFile = fopen(log_file_name, "rt");
+//     int i = 0;
+//     while(fgets(line, 80, fileListFile) != NULL){
+//         sscanf(line, "%s",files[i]);
+//         printf("HERE\n");
+//         printf("%s\n", files[i]);
+//         i++;
+//     }
+
+// }
+
 int main(int argc, char *argv[])
 
 {
@@ -33,16 +45,32 @@ int main(int argc, char *argv[])
     struct addrinfo hints, *servinfo, *p;
     int status; //Error status
     char receive_buffer[MAX_RECEIVE_BUFFER_LENGTH];
-    char * server_ip, *server_port_num, *client_name;
+    char * server_ip, *server_port_num, *client_name, *log_file_name;
+
+    FILE *fileListFile;
+    char line[80];
+    char files[20][80];
 
 
-    if(argc != 4){
-    	printf("usage is ./client <client name> <server ip> <server port #>\n");
+    if(argc != 5){
+    	printf("usage is ./client <client name> <server ip> <server port#> <list of files>\n");
     	return 0;
     }
     server_ip = argv[2];
     server_port_num = argv[3];
     client_name = argv[1];
+    log_file_name  = argv[4];
+    //Get the list of files
+    fileListFile = fopen(log_file_name, "rt");
+    int i = 0;
+    while(fgets(line, 80, fileListFile) != NULL){
+    	sscanf(line, "%s",files[i]);
+    	printf("HERE\n");
+    	printf("%s\n", files[i]);
+    	i++;
+    }
+
+
 
 
 //Log the start up time
@@ -113,7 +141,7 @@ int main(int argc, char *argv[])
 
 	//########## SEND MORE THINGS TO TEST THREADS
 	
-	int i;
+	
 	//Send a message to server with name and files list
 	char msg2[100];
 	for(i = 0; i < 20; i++){

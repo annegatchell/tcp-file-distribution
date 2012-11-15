@@ -263,8 +263,8 @@ int main(int argc,char *argv[])
 	    	
 	    }
 	    else{
-	    	printf("HERE!!!\n");
-	    	printf("readsocks %d\n", readsocks);
+	    	// printf("HERE!!!\n");
+	    	// printf("readsocks %d\n", readsocks);
 
 	    //if someone is trying to connect, you'll have to accept() 
 		//the connection
