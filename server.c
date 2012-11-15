@@ -93,6 +93,46 @@ void build_select_list(){
 	}
 }
 
+void handle_data(struct clientListEntry *client){
+	// printf("HANDLING THE DATA\n");
+	char buffer[1024];
+	int bytes_received;
+	if((bytes_received = recv(client->sock_num,buffer,sizeof(buffer),0)) < 0)
+    {
+    	close(client->sock_num);
+    	FD_CLR (client->sock_num, &active_fd_set);
+    	//#####REMOVE FROM LIST
+    }
+    else if(bytes_received == 0){
+    	int a = 3;
+    }
+    else
+    {
+        printf("Bytes received %d\nmessage %s\n", bytes_received, buffer);
+        
+    }
+			            
+}
+
+void check_existing_connections(){
+	struct clientListEntry *current;
+	if(clients.first != 0){
+		current = clients.first;
+		while(current != 0){
+			if(current->sock_num != 0){
+				if(FD_ISSET(current->sock_num, &active_fd_set)){
+					handle_data(current);
+				}
+				
+				current = current->next;
+			}
+		}
+	}
+}
+
+
+
+
 // get sockaddr, IPv4 or IPv6:
 void *get_in_addr(struct sockaddr *sa)
 {
@@ -180,7 +220,6 @@ int main(int argc,char *argv[])
             perror("setsockopt");
             exit(1);
     }
-
      /*
      * Bind our local address so that the client can send to us.
      */
@@ -194,13 +233,11 @@ int main(int argc,char *argv[])
      		perror("Server can't listen!!!\n");
      	}
     }
-
-   
-   
    	// FD_ZERO(&active_fd_set); //clear the select set
    	// FD_SET(sockfd, &active_fd_set); //add socket to the listening list
    	struct clientListEntry *current_client;
    	struct clientListEntry *new_client;
+   	int readsocks; //number of sockets ready for reading
 	//printf("%d\n",FD_SETSIZE);
     for ( ; ; ) //endless loop
     {
@@ -211,15 +248,19 @@ int main(int argc,char *argv[])
     //a pending connection on the socket waiitng to be accepted with accept
     	build_select_list();
 
-	    if (select(FD_SETSIZE, &active_fd_set, NULL, NULL, NULL) == -1) {
+	    if ((readsocks = select(FD_SETSIZE, &active_fd_set, NULL, NULL, NULL)) == -1) {
 	        perror("select");
 	        exit(4);
 	    }
-
+	    else if(readsocks == 0){
+	    	printf("Nothing to read\n");
+	    }
+	    else{
+	    	// printf("readsocks %d\n", readsocks);
 	    //if someone is trying to connect, you'll have to accept() 
 		//the connection
         //newsockfd = accept(...)
-        int i;
+        
         // for(i = 0; i < FD_SETSIZE; i++){
         	// if(FD_ISSET(i, &active_fd_set)){
         		
@@ -313,7 +354,7 @@ int main(int argc,char *argv[])
 						//oh, and notify everyone that they're gone.
 		            }
                 }
-
+                check_existing_connections();
                 // else if(getClientFromSocket(i, current_client) != -1){
                 // 	//printf("WHAT DO I DO HERE?\n");
                 // }
@@ -322,7 +363,7 @@ int main(int argc,char *argv[])
                 // 	continue;
                 // }
         	// }
-        // }
+        }
     }
 
 	

@@ -116,7 +116,7 @@ int main(int argc, char *argv[])
 	int i;
 	//Send a message to server with name and files list
 	char msg2[100];
-	for(i = 0; i < 20; i++){
+	for(i = 0; i < 1; i++){
 		sprintf(msg2,"test %d from %s", i, client_name);
 		len = strlen(msg2);
 		printf("%s\n", msg2);
