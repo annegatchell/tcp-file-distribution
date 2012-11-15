@@ -11,6 +11,7 @@
 #include <unistd.h>
 #include <sys/time.h>
 #include <netdb.h>
+#include "helper.c"
 
 // You may/may not use pthread for the client code. The client is communicating with
 // the server most of the time until he recieves a "GET <file>" request from another client.

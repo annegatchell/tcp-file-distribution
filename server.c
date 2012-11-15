@@ -13,6 +13,7 @@
 #include <unistd.h>
 #include <sys/time.h>
 #include <netdb.h>
+#include "helper.c"
 
 #define MAX_CONNECTS 50
 #define LOG_FILE "server-log.txt"
@@ -304,7 +305,17 @@ int main(int argc,char *argv[])
 	                	FD_CLR (newsockfd, &active_fd_set);
 	                }
 	                else{
-		                printf("Bytes received %d\nmessage %s\n", bytes_received, receive_buf);
+	                	char client_name[80];
+	                	char file_list[MAX_BUFFER_SIZE];
+	                	int c = 0;
+	                	while(receive_buf[c] != '\n'){
+	                		client_name[c] = receive_buf[c];
+	                		c++;
+	                	}
+	                	client_name[c] = 0;
+	                	strcpy(file_list,&receive_buf[c]);
+		                printf("Bytes received %d\nname:%s\nfilelist:%s\n", bytes_received, client_name,file_list);
+
 			            //########################
 			            // This is the point where you should save the files in the hashtable
 			            // and add the client name to the list of clients
