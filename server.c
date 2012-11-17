@@ -28,12 +28,12 @@ struct clientListEntry{
 	int sock_num;
 	char client_name[24];
 	struct clientListEntry *next;
-	//struct file_entry *files[];
 };
 
 struct file_entry
 {
 	char file_name[MAX_FILENAME_SIZE];
+	int size;
 	struct clientListEntry *client;
 	struct file_entry *next;	
 };
@@ -55,6 +55,8 @@ struct fileList
 struct clientList clients = {0, 0};
 fd_set active_fd_set;  // temp file descriptor list for select()
 int sockfd, newsockfd = 0; //Listen on sockfd, new connection on newsockfd
+struct fileList files = {0, 0};
+
 
 //thread function declaration
 //void *connection(void *);
@@ -64,22 +66,23 @@ int sockfd, newsockfd = 0; //Listen on sockfd, new connection on newsockfd
 // char logFileName[64];
 
 
-int getClientFromSocket(int s, struct clientListEntry *client){
+int getClientFromSocket(int s, struct clientListEntry **client){
 	struct clientListEntry *current;
 	if(clients.first != 0){
 		current = clients.first;
 		while(current != 0){
 			if (s == current->sock_num){
-				client = current;
+				*client = current;
+				printf("current ptr %p\n", current);
+				printf("client ptr %p\n", *client);
+				// printf("Test access %s\n", **client->client_name);
 				return 1;
 			}
 			else{
-				printf("clients %s\n",clients.first->client_name);
 				current = current->next;
 			}
 		}
 	}
-	printf("clients %s\n",clients.first->client_name);
 	return -1;
 }
 
@@ -125,7 +128,7 @@ void handle_data(struct clientListEntry *client){
     	//#####REMOVE FROM LIST
     }
     else if(bytes_received == 0){
-    	int a = 3;
+    	3;
     }
     else
     {
@@ -178,11 +181,66 @@ void send_message_to_all_clients(char* msg, size_t size){
 }
 
 void send_updated_files_list(){
-	int x = 1;
+	1;
 }
 
-void add_file_list_to_table(char file_list[]){
-	int x = 2;
+void add_file_list_to_table(char file_list[], int recv_port){
+	//Use strtok to find our happy jolly file names
+	//char* strtok( char* str, const char* delim );
+	char* temp;
+
+	temp = strtok(file_list, "\n");
+	printf("TEMP %s\n", temp);
+	files.after_last = malloc(sizeof(struct file_entry));
+	strcpy(files.after_last->file_name, temp);
+	printf("string after copy: %s\n", files.after_last->file_name);
+	files.after_last->size = 0;
+	//What client is it? get from recv_port
+	struct clientListEntry *tmp_client = malloc(sizeof(struct clientListEntry));
+	printf("tmp_client ptr before %p\n", tmp_client);
+	if(getClientFromSocket(recv_port, &tmp_client) == -1){
+
+		fprintf(stderr, "Error in getting the client from socket");
+	}
+	else{
+		printf("tmp_client ptr%p\n", tmp_client);
+		printf("tmp after get client: %s\n",tmp_client->client_name);
+		files.after_last->client = tmp_client;
+		printf("client after get client: %s\n",files.after_last->client->client_name);
+	}
+	free(tmp_client);
+	files.after_last->next = 0;
+	if(files.first == 0){
+		files.first = files.after_last;
+	}
+	files.after_last = files.after_last->next;
+
+//#####Continue the traversal of the string
+	printf("TEMP %s\n", temp);
+	while((temp = strtok(NULL, "\n")) != NULL){
+		//ADD THE FILE TO THE FILE LIST
+		//Copy filename to file in file_entry
+		files.after_last = malloc(sizeof(struct file_entry));
+		strcpy(files.after_last->file_name, temp);
+		printf("string after copy: %s\n", files.after_last->file_name);
+		files.after_last->size = 0;
+		//What client is it? get from recv_port
+		if(getClientFromSocket(recv_port, files.after_last->client) == -1){
+			fprintf(stderr, "Error in getting the client from socket");
+		}
+		else{
+			printf("%p\n", files.after_last->client);
+			printf("client after get client: %s\n",files.after_last->client->client_name);
+		}
+		files.after_last->next = 0;
+		if(files.first == 0){
+			files.first = files.after_last;
+		}
+		files.after_last = files.after_last->next;
+	}
+	
+	
+
 }
 
 // get sockaddr, IPv4 or IPv6:
@@ -362,7 +420,7 @@ int main(int argc,char *argv[])
 	                	client_name[c] = 0;
 	                	strcpy(file_list,&receive_buf[c]);
 		                printf("Bytes received %d\nname:%s\nfilelist:%s\n", bytes_received, client_name,file_list);
-		                add_file_list_to_table(file_list);
+		                
 			            //########################
 			            // This is the point where you should save the files in the hashtable
 			            // and add the client name to the list of clients
@@ -380,6 +438,9 @@ int main(int argc,char *argv[])
 		                	clients.first = clients.after_last;
 		                }
 		                clients.after_last = clients.after_last->next;
+
+		                //### Add file to file list, now that it has a client to point to
+		                add_file_list_to_table(file_list, i);
 
 			            //since you're talking nicely now.. probably a good idea send them
 						//a message to welcome them to the service.

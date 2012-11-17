@@ -1,4 +1,4 @@
-CFLAGS = -Wall
+CFLAGS = -Wall -g
 
 CC = gcc
 SRCS = client.c server.c
