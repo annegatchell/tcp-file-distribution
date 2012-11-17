@@ -143,12 +143,14 @@ void handle_data(struct clientListEntry *client){
 }
 
 void check_existing_connections(){
+	printf("stuckin here\n");
 	struct clientListEntry *current;
 	if(clients.first != 0){
 		current = clients.first;
 		while(current != 0){
 			if(current->sock_num != 0){
 				if(FD_ISSET(current->sock_num, &active_fd_set)){
+
 					handle_data(current);
 				}
 				current = current->next;
@@ -388,13 +390,8 @@ int main(int argc,char *argv[])
 			            }
 			            printf("Sent welcome: Bytes sent: %d\n", bytes_sent);
 
-			            //if there are others connected to the server, probably good to notify them
-						//that someone else has joined.
-						// char ugh[] = "New client joined: ";
-						// char * new_client_msg;
-						// new_client_msg = malloc(sizeof(client_name) + sizeof(ugh));
-						// new_client_msg = strcat(ugh, client_name);
-							// printf("HERE\n");
+			         
+			            
 			            send_message_to_all_clients(client_name, sizeof(client_name));
 			            send_updated_files_list();
 
@@ -424,7 +421,7 @@ int main(int argc,char *argv[])
 						//oh, and notify everyone that they're gone.
 		            }
                 }
-                check_existing_connections();
+                //check_existing_connections();
                 // else if(getClientFromSocket(i, current_client) != -1){
                 // 	//printf("WHAT DO I DO HERE?\n");
                 // }
