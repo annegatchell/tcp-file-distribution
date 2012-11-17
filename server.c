@@ -100,7 +100,7 @@ void build_select_list(){
 		FD_SET(newsockfd, &active_fd_set);
 	}
 
-	struct clientListEntry *current;
+	/*struct clientListEntry *current;
 	if(clients.first != 0){
 		current = clients.first;
 		while(current != 0){
@@ -110,7 +110,7 @@ void build_select_list(){
 				current = current->next;
 			}
 		}
-	}
+	}*/
 }
 
 void handle_data(struct clientListEntry *client){
@@ -312,17 +312,17 @@ int main(int argc,char *argv[])
 	    else{
 	    	// printf("HERE!!!\n");
 	    	// printf("readsocks %d\n", readsocks);
-
+	    }
 	    //if someone is trying to connect, you'll have to accept() 
 		//the connection
         //newsockfd = accept(...)
-        
-        // for(i = 0; i < FD_SETSIZE; i++){
-        	// if(FD_ISSET(i, &active_fd_set)){
+        int i;
+        for(i = 0; i < FD_SETSIZE; i++){
+        	if(FD_ISSET(i, &active_fd_set)){
         		
         		//If the connection is on the listening socket
-        		if(FD_ISSET(sockfd, &active_fd_set)){
-        		// if(i == sockfd){
+        		// if(FD_ISSET(sockfd, &active_fd_set)){
+        		if(i == sockfd){
 			    	printf("Got a connection!\n");
 			    	//Accept the connection
 			    	newsockfd = accept(sockfd, (struct sockaddr *)&client_addr, &addr_size);
@@ -335,11 +335,11 @@ int main(int argc,char *argv[])
 			    	inet_ntop(client_addr.ss_family,
 		          				get_in_addr((struct sockaddr *)&client_addr), s, sizeof(s)); 
 			    	printf("server: got connection from %s, socket %d\n", s, newsockfd);
-			    	FD_SET(newsockfd, &active_fd_set);
+			    	
 	    		}
 	    		//This is the branch for brand new clients
-	    		else if(FD_ISSET(newsockfd, &active_fd_set))
-	    		// else if(i == newsockfd)
+	    		// else if(FD_ISSET(newsockfd, &active_fd_set))
+	    		else if(i == newsockfd)
 	    		//if you've accepted the connection, you'll probably want to
 				//check "select()" to see if they're trying to send data, 
 			    //like their name, and if so
@@ -391,39 +391,18 @@ int main(int argc,char *argv[])
 			            	return 2;
 			            }
 			            printf("Sent welcome: Bytes sent: %d\n", bytes_sent);
-
-			         
-			            
 			            send_message_to_all_clients(client_name, sizeof(client_name));
 			            send_updated_files_list();
 
 			            //reset the newsockfd to 0, so that we don't keep coming to this branch for
 			            //this client
 			            newsockfd = 0;
-
-
-
-						//pthread_mutex_lock(&mutex);
-						//now add your new user to your global list of users
-						//pthread_mutex_unlock(&mutex);
-
-						//now you need to start a thread to take care of the 
-						//rest of the messages for that client
-						//r = pthread_create(&th, NULL, &connection, (void *)i);
-						//if (r != 0) { fprintf(stderr, "thread create failed\n"); }
-
-						//Get this guy off the select list, since the thread is watching now
-						//FD_CLR (i, &active_fd_set);
-						
-						//A requirement for 5273 students:
-						//at this point...
-						//whether or not someone connected, you should probably
-						//look for clients that should be timed out
-						//and kick them out
-						//oh, and notify everyone that they're gone.
 		            }
                 }
-                check_existing_connections();
+                else{
+                	check_existing_connections();
+                }
+                
                 // else if(getClientFromSocket(i, current_client) != -1){
                 // 	//printf("WHAT DO I DO HERE?\n");
                 // }
@@ -431,17 +410,12 @@ int main(int argc,char *argv[])
 
                 // 	continue;
                 // }
-        	// }
+        	}
+        	//
         }
     }
 
-	
-	
 	freeaddrinfo(servinfo);
-	
-
-    //}
-    
     return 0;
 }
 
