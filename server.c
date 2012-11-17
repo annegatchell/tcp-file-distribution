@@ -25,8 +25,13 @@
  */
 struct clientListEntry{
 	int sock_num;
-	char* client_name;
+	char client_name[24];
 	struct clientListEntry *next;
+};
+
+struct file_entry
+{
+	char* file_name;
 };
 
 struct clientList
@@ -349,7 +354,8 @@ int main(int argc,char *argv[])
 		                clients.after_last = malloc(sizeof(struct clientListEntry));
 		                //clients.last->next = new_client;//malloc(sizeof(struct clientListEntry));
 		                clients.after_last->sock_num = newsockfd;
-		                clients.after_last->client_name = client_name;
+		                strcpy(clients.after_last->client_name, client_name);
+		                // clients.after_last->client_name = client_name;
 		                clients.after_last->next = 0;
 		                if(clients.first == 0){
 		                	clients.first = clients.after_last;

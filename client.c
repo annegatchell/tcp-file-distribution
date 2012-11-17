@@ -46,6 +46,7 @@ void update_list_of_files(FILE *fileListFile, char files[][80], char* log_file_n
     while(fgets(line, 80, fileListFile) != NULL){
         sscanf(line, "%s",files[i]);
         printf("%d\n", z);
+        printf("%s\n", line);
         strcat(files_name_string, line);
         z += sizeof(line);
         //printf("%s\n", files[i]);
@@ -84,6 +85,7 @@ int main(int argc, char *argv[])
     char line[80];
     char files[20][80];
     char files_name_string[20*80];
+    memset(files_name_string, 0, sizeof(files_name_string));
 
      int BACKLOG = 1; //Number of clients allowed in queue
      int yes=1;
@@ -102,17 +104,6 @@ int main(int argc, char *argv[])
     //Get the list of files
     update_list_of_files(fileListFile, files, argv[4], files_name_string);
     printf("%s\n", files_name_string);
-    // fileListFile = fopen(log_file_name, "rt");
-    // int i = 0;
-    // while(fgets(line, 80, fileListFile) != NULL){
-    // 	sscanf(line, "%s",files[i]);
-    // 	printf("HERE\n");
-    // 	printf("%s\n", files[i]);
-    // 	i++;
-    // }
-
-
-
 
 //Log the start up time
     gettimeofday(&currTime,NULL);
@@ -156,7 +147,7 @@ int main(int argc, char *argv[])
     }
 
 //
-    char *msg = malloc(sizeof(client_name) + sizeof("\n") + sizeof(files));
+    char *msg = malloc(sizeof(client_name) + sizeof("\n") + sizeof(files_name_string));
     msg = strcat(client_name, "\n");
     msg = strcat(msg, files_name_string);
 	int len, bytes_sent;
@@ -250,6 +241,9 @@ int main(int argc, char *argv[])
                             MAX_RECEIVE_BUFFER_LENGTH,0)) == -1){
                     perror("receive error");
                     return 2;
+                }
+                else if(bytes_received == 0){
+                    4;
                 }
                 else{
                     printf("Bytes received %d\n%s\n", 
