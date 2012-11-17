@@ -138,8 +138,22 @@ void check_existing_connections(){
 	}
 }
 
-void send_message_to_all_clients(char* msg){
-	int x = 0;
+void send_message_to_all_clients(char* msg, size_t size){
+	struct clientListEntry *current;
+	size_t bytes_sent;
+	if(clients.first != 0){
+		current = clients.first;
+		while(current != 0){
+			if(current->sock_num != 0){
+				if((bytes_sent = send(current->sock_num, msg, size, 0)) == -1){
+        			perror("send error");
+        			break;
+    			}
+				current = current->next;
+			}
+		}
+	}
+	
 }
 
 void send_updated_files_list(){
@@ -360,7 +374,7 @@ int main(int argc,char *argv[])
 						// new_client_msg = malloc(sizeof(client_name) + sizeof(ugh));
 						// new_client_msg = strcat(ugh, client_name);
 							// printf("HERE\n");
-			            send_message_to_all_clients(client_name);
+			            send_message_to_all_clients(client_name, sizeof(client_name));
 			            send_updated_files_list();
 
 			            //reset the newsockfd to 0, so that we don't keep coming to this branch for
