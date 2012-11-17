@@ -28,7 +28,7 @@ struct clientListEntry{
 	int sock_num;
 	char client_name[24];
 	struct clientListEntry *next;
-	struct file_entry *files[];
+	//struct file_entry *files[];
 };
 
 struct file_entry
@@ -91,10 +91,12 @@ void sigchld_handler(int s)
 
 void build_select_list(){
 	FD_ZERO(&active_fd_set);
+	// printf("adding the listening socket %d to the activelist\n", newsockfd);
 	FD_SET(sockfd, &active_fd_set);
 
+
 	if(newsockfd != 0){
-		printf("new sock fd %d\n", newsockfd);
+		printf("adding the new socket %d to the activelist\n", newsockfd);
 		FD_SET(newsockfd, &active_fd_set);
 	}
 
@@ -103,6 +105,7 @@ void build_select_list(){
 		current = clients.first;
 		while(current != 0){
 			if(current->sock_num != 0){
+				printf("adding the socket %d to the activelist\n", current->sock_num);
 				FD_SET(current->sock_num, &active_fd_set);
 				current = current->next;
 			}
@@ -327,7 +330,8 @@ int main(int argc,char *argv[])
 			    	//FD_SET(newsockfd, &active_fd_set);
 			    	inet_ntop(client_addr.ss_family,
 		          				get_in_addr((struct sockaddr *)&client_addr), s, sizeof(s)); 
-			    	printf("server: got connection from %s\n", s);
+			    	printf("server: got connection from %s, socket %d\n", s, newsockfd);
+			    	FD_SET(newsockfd, &active_fd_set);
 	    		}
 	    		//This is the branch for brand new clients
 	    		else if(FD_ISSET(newsockfd, &active_fd_set))

@@ -33,7 +33,7 @@ void build_select_list(){
 
     //NEED TO IMPLMENT LISTENER SOCKET
     if(listenfd != 0){
-        printf("new sock fd %d\n", listenfd);
+        // printf("new sock fd %d\n", listenfd);
         FD_SET(listenfd, &active_fd_set);
     }
 }
@@ -230,13 +230,13 @@ int main(int argc, char *argv[])
         }
         else if(readsocks == 0){
             printf("Nothing to read\n");
-            
         }
-        else{
+        else
+        {
         //If the connection is on the Server socket
             if(FD_ISSET(sockfd, &active_fd_set)){
             // if(i == sockfd){
-                printf("Got a packet from the server!\n");
+                
                 if((bytes_received = recv(sockfd,receive_buffer,
                             MAX_RECEIVE_BUFFER_LENGTH,0)) == -1){
                     perror("receive error");
@@ -245,9 +245,13 @@ int main(int argc, char *argv[])
                 else if(bytes_received == 0){
                     4;
                 }
-                else{
+                else if(bytes_received > 0){
+                    printf("Got a packet from the server!\n");
                     printf("Bytes received %d\n%s\n", 
                     bytes_received, receive_buffer);
+                }
+                else{
+                    4;
                 }
             }
         //If the connection is on the listening socket
