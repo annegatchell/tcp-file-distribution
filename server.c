@@ -138,8 +138,17 @@ void check_existing_connections(){
 	}
 }
 
+void send_message_to_all_clients(char* msg){
+	int x = 0;
+}
 
+void send_updated_files_list(){
+	int x = 1;
+}
 
+void add_file_list_to_table(char file_list[]){
+	int x = 2;
+}
 
 // get sockaddr, IPv4 or IPv6:
 void *get_in_addr(struct sockaddr *sa)
@@ -315,17 +324,18 @@ int main(int argc,char *argv[])
 	                	client_name[c] = 0;
 	                	strcpy(file_list,&receive_buf[c]);
 		                printf("Bytes received %d\nname:%s\nfilelist:%s\n", bytes_received, client_name,file_list);
-
+		                add_file_list_to_table(file_list);
 			            //########################
 			            // This is the point where you should save the files in the hashtable
 			            // and add the client name to the list of clients
 			            //########################
 		                //new_client = {i, receive_buf, NULL};
+		                // free(file_list);
 		              
 		                clients.after_last = malloc(sizeof(struct clientListEntry));
 		                //clients.last->next = new_client;//malloc(sizeof(struct clientListEntry));
 		                clients.after_last->sock_num = newsockfd;
-		                clients.after_last->client_name = receive_buf;
+		                clients.after_last->client_name = client_name;
 		                clients.after_last->next = 0;
 		                if(clients.first == 0){
 		                	clients.first = clients.after_last;
@@ -343,15 +353,20 @@ int main(int argc,char *argv[])
 			            }
 			            printf("Sent welcome: Bytes sent: %d\n", bytes_sent);
 
+			            //if there are others connected to the server, probably good to notify them
+						//that someone else has joined.
+						// char ugh[] = "New client joined: ";
+						// char * new_client_msg;
+						// new_client_msg = malloc(sizeof(client_name) + sizeof(ugh));
+						// new_client_msg = strcat(ugh, client_name);
+							// printf("HERE\n");
+			            send_message_to_all_clients(client_name);
+			            send_updated_files_list();
 
 			            //reset the newsockfd to 0, so that we don't keep coming to this branch for
 			            //this client
 			            newsockfd = 0;
 
-
-
-			            //if there are others connected to the server, probably good to notify them
-						//that someone else has joined.
 
 
 						//pthread_mutex_lock(&mutex);
