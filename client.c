@@ -19,13 +19,12 @@
 // #define PORT "6000"
 #define LOG_FILE "client-log.txt"
 #define MAX_RECEIVE_BUFFER_LENGTH 500
-#define LISTENER_PORT "6000"
 
 
 int sockfd; //connect to server on sockfd
 int listenfd = 0; //listen on port listenfd
 fd_set active_fd_set; 
-char *listen_port_num = 6000;
+char *listen_port_num = 0;
 
 void build_select_list(){
     FD_ZERO(&active_fd_set);
@@ -92,14 +91,15 @@ int main(int argc, char *argv[])
      char ip_s[INET6_ADDRSTRLEN];
 
 
-    if(argc != 5){
-    	printf("usage is ./client <client name> <server ip> <server port#> <list of files>\n");
+    if(argc != 6){
+    	printf("usage is ./client <client name> <server ip> <server port#> <list of files> <listen port>\n");
     	return 0;
     }
     server_ip = argv[2];
     server_port_num = argv[3];
     client_name = argv[1];
     log_file_name  = argv[4];
+    listen_port_num = argv[5];
 
     //Get the list of files
     update_list_of_files(fileListFile, files, argv[4], files_name_string);
@@ -178,7 +178,7 @@ int main(int argc, char *argv[])
     hints.ai_socktype = SOCK_STREAM; //TCP stream sockets
     hints.ai_flags = AI_PASSIVE;     //fill in my IP for me
 
-    if ((status = getaddrinfo(NULL, LISTENER_PORT, &hints, &listenerinfo)) != 0) {
+    if ((status = getaddrinfo(NULL, listen_port_num, &hints, &listenerinfo)) != 0) {
         fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(status));
         return 2;
     }
@@ -298,7 +298,7 @@ int main(int argc, char *argv[])
     		}
     	}
 	}
-
+    freeaddrinfo(listenerinfo);
 
     return 0;
 }

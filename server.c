@@ -105,7 +105,7 @@ void build_select_list(){
 		current = clients.first;
 		while(current != 0){
 			if(current->sock_num != 0){
-				printf("adding the socket %d to the activelist\n", current->sock_num);
+				// printf("adding the socket %d to the activelist\n", current->sock_num);
 				FD_SET(current->sock_num, &active_fd_set);
 				current = current->next;
 			}
@@ -143,7 +143,7 @@ void handle_data(struct clientListEntry *client){
 }
 
 void check_existing_connections(){
-	printf("stuckin here\n");
+	// printf("stuckin hesre\n");
 	struct clientListEntry *current;
 	if(clients.first != 0){
 		current = clients.first;
@@ -285,6 +285,8 @@ int main(int argc,char *argv[])
      		perror("Server can't listen!!!\n");
      	}
     }
+
+    
    	// FD_ZERO(&active_fd_set); //clear the select set
    	// FD_SET(sockfd, &active_fd_set); //add socket to the listening list
    	struct clientListEntry *current_client;
@@ -421,7 +423,7 @@ int main(int argc,char *argv[])
 						//oh, and notify everyone that they're gone.
 		            }
                 }
-                //check_existing_connections();
+                check_existing_connections();
                 // else if(getClientFromSocket(i, current_client) != -1){
                 // 	//printf("WHAT DO I DO HERE?\n");
                 // }
@@ -435,11 +437,11 @@ int main(int argc,char *argv[])
 
 	
 	
-	
+	freeaddrinfo(servinfo);
 	
 
     //}
-    freeaddrinfo(servinfo);
+    
     return 0;
 }
 
