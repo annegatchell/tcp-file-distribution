@@ -18,6 +18,7 @@
 #define MAX_CONNECTS 50
 #define LOG_FILE "server-log.txt"
 #define MAX_BUFFER_SIZE 500
+#define MAX_FILENAME_SIZE 80
 
 /*
  * You should use a globally declared linked list or an array to 
@@ -27,11 +28,14 @@ struct clientListEntry{
 	int sock_num;
 	char client_name[24];
 	struct clientListEntry *next;
+	struct file_entry *files[];
 };
 
 struct file_entry
 {
-	char* file_name;
+	char file_name[MAX_FILENAME_SIZE];
+	struct clientListEntry *client;
+	struct file_entry *next;	
 };
 
 struct clientList
@@ -39,6 +43,13 @@ struct clientList
 	struct clientListEntry *first;
 	//after_last points to the same place as the next pointer of the last entry
 	struct clientListEntry *after_last;  
+};
+
+struct fileList
+{
+	struct file_entry *first;
+	struct file_entry *after_last;
+
 };
 
 struct clientList clients = {0, 0};
