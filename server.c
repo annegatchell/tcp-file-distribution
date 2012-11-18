@@ -199,7 +199,12 @@ void interpret_commant(char command[], CLIENT_LIST_ENTRY *client){
 	        printf("LIST\n");
 	        send_updated_files_list();
 	    }
+	    else if((val = strcmp(intermediate, "SendMyFilesList")) == 0){
+	        printf("SENDMYFILELIST\n");
+	        send_updated_files_list();
+	    }
 	    else{
+	    	printf("Client must have sent updated files list\n");
 	    	send_updated_files_list();
 	    }
 	}

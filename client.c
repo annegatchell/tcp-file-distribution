@@ -80,7 +80,11 @@ void send_file_list(){
     printf("Bytes sent: %ld\n", bytes_sent);
 }
 
-void interpret_commant(char command[]){
+void connect_to_other_client(){
+    
+}
+
+int interpret_commant(char command[]){
     char* temp;
     char intermediate[MAX_CMD_LINE];
     strcpy(intermediate, command);
@@ -88,31 +92,58 @@ void interpret_commant(char command[]){
     char cmd[16];
     int val;
     size_t bytes_sent;
-   
+    size_t bytes_received;
+
+    char ip_recv[INET6_ADDRSTRLEN];
+
+    printf("int %s\n", intermediate );
+    if(strcmp(intermediate,"\n") == 0){
+        strcpy(intermediate,"RAWR");
+        printf("intermediate %s\n", intermediate);
+        return 1;
+    }
 
     printf("in here int %s\n", intermediate);
     temp = strtok(intermediate," ");
     strcpy(cmd, temp);
-    printf("Val %d\n", val);
+    printf("temp %s\n", temp);
     if((val = strcmp(intermediate, "Get")) == 0){
         printf("GET\n");
         printf("%s\n", command);
         if((bytes_sent = send(sockfd, command, MAX_CMD_LINE, 0)) == -1){
             perror("send error");
         }
-        printf("Bytes sent: %ld\n", bytes_sent);
-    }
-    else if((val = strcmp(intermediate, "List\n"))==0){
-        printf("LIST\n");
-        if((bytes_sent = send(sockfd, cmd, sizeof(cmd), 0)) == -1){
-            perror("send error");
+        printf("Bytes sent: %ld\nWaiting for response.........\n", bytes_sent);
+        FD_CLR(sockfd, &active_fd_set);
+        if((bytes_received = recv(sockfd,ip_recv, INET6_ADDRSTRLEN,0)) < 0){
+            perror("receive error");
+            return 2;
         }
-        printf("Bytes sent: %ld\n", bytes_sent);
+        else{
+            printf("ip %s\n", ip_recv);
+            connect_to_other_client();
+        }   
+
     }
-    else if((val = strcmp(intermediate, "SendMyFilesList\n")) == 0){
-        printf("SENDMYFILELIST\n");
-        send_file_list();
+    else{
+        temp = strtok(command, "\n");
+        printf("temp2 %s\n", temp);
+        if((val = strcmp(temp, "List"))==0){
+            printf("LIST\n");
+            if((bytes_sent = send(sockfd, cmd, sizeof(cmd), 0)) == -1){
+                perror("send error");
+            }
+            printf("Bytes sent: %ld\n", bytes_sent);
+        }
+        else if((val = strcmp(temp, "SendMyFilesList")) == 0){
+            printf("SENDMYFILELIST\n");
+            send_file_list();
+        }
+        else{
+            printf("Invalid command\n");
+        }
     }
+    return 0;
 
 }
 
@@ -334,9 +365,12 @@ int main(int argc, char *argv[])
                 }
                 else if(i == STDIN){
                     fgets(command, sizeof(command), stdin);
-                    printf("YEAH I HEARD YOU\n");
-
-                    interpret_commant(command);
+                    if(!(interpret_commant(command))){
+                        printf("Try again\n");
+                    }
+                    else{
+                        printf("Success\n");
+                    }
                 }
             }
         }
