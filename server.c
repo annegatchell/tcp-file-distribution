@@ -144,7 +144,9 @@ int find_IP_for_file(char filename[], char addr[]){
 	current = files.first;
 	while(current){
 		if (strcmp(current->file_name, filename) == 0){
-			return current->client->ip;
+			printf("client ip %s\n", current->client->ip);
+			strcpy(addr,current->client->ip);
+			return 1;
 		}
 		current = current->next;
 	}
@@ -184,12 +186,12 @@ void interpret_commant(char command[], CLIENT_LIST_ENTRY *client){
 				}
 	        }
 	        else{
-	        	printf("%s\n", ip_temp);
+	        	printf("ip %s\n", ip_temp);
 		        if((bytes_sent = send(client->sock_num, ip_temp, sizeof(ip_temp), 0)) == -1){
 	    			perror("send error");
 				}
 				else{
-	    			printf("yes files sent msg to client %s\nmsg: %s bytes: %ld\n", client->client_name, msg,bytes_sent);
+	    			printf("yes files sent msg to client %s\nmsg: %s bytes: %ld\n", client->client_name, ip_temp,bytes_sent);
 				}
 			}
 	    }
@@ -555,9 +557,10 @@ int main(int argc,char *argv[])
 			            // This is the point where you should save the files in the hashtable
 			            // and add the client name to the list of clients
 			            //#######################
-		            
+
 		                new_entry->sock_num = i;
-		                strcpy(new_entry->ip, s);
+		                //#####FOR NOW WE ARE JUST USING LOCALHOST IP ADDRS FOR ALL CLIENTS//
+		                strcpy(new_entry->ip, "localhost");
 		                strcpy(new_entry->client_name, client_name);
 		                new_entry->next = NULL;
 		                if(!clients.first){
