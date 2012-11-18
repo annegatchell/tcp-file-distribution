@@ -23,6 +23,8 @@ typedef struct file_entry FILE_ENTRY;
 typedef struct clientListEntry CLIENT_LIST_ENTRY;
 typedef struct clientList CLIENT_LIST;
 typedef struct fileList FILE_LIST;
+
+void send_updated_files_list();
 /*
  * You should use a globally declared linked list or an array to 
  * keep track of your connections.  Be sure to manage either properly
@@ -126,17 +128,38 @@ void build_select_list(){
 		FD_SET(newsockfd, &active_fd_set);
 	}
 
-	/*struct clientListEntry *current;
-	if(clients.first != 0){
-		current = clients.first;
-		while(current != 0){
-			if(current->sock_num != 0){
-				// printf("adding the socket %d to the activelist\n", current->sock_num);
-				FD_SET(current->sock_num, &active_fd_set);
-				current = current->next;
-			}
+	CLIENT_LIST_ENTRY *current;
+	current = clients.first;
+	while(current){
+		if(current->sock_num != 0){
+			// printf("adding the socket %d to the activelist\n", current->sock_num);
+			FD_SET(current->sock_num, &active_fd_set);
+			current = current->next;
 		}
-	}*/
+	}
+}
+void interpret_commant(char command[]){
+    char* temp;
+    char cmd[16];
+    int val;
+    size_t bytes_sent;
+
+
+    printf("in here\n");
+    temp = strtok(command," ");
+    strcpy(cmd, temp);
+    printf("Val %d\n", val);
+    if((val = strcmp(cmd, "Get\n")) == 0){
+        printf("GET\n");
+    }
+    else if((val = strcmp(cmd, "List\n"))==0){
+        printf("LIST\n");
+        send_updated_files_list();
+    }
+    else if((val = strcmp(cmd, "SendMyFilesList\n")) == 0){
+        printf("SEND<MYFILELIST\n");
+    }
+
 }
 
 void handle_data(struct clientListEntry *client){
@@ -156,6 +179,7 @@ void handle_data(struct clientListEntry *client){
     else
     {
         printf("Bytes received %d\nmessage %s\n", bytes_received, buffer);
+        interpret_commant(buffer);
         char* msg = "got cha msg, foo\n";
         int len, bytes_sent;
         len = strlen(msg);
@@ -167,15 +191,15 @@ void handle_data(struct clientListEntry *client){
 			            
 }
 
-void check_existing_connections(){
-	// printf("stuckin hesre\n");
+void check_existing_connections(int i){
+	printf("Getting in here\n");
 	CLIENT_LIST_ENTRY *current;
 	if(clients.first != 0){
 		current = clients.first;
 		while(current != 0){
 			printf("check_existing_connections client name %s\n",current->client_name);
 			if(current->sock_num != 0){
-				if(FD_ISSET(current->sock_num, &active_fd_set)){
+				if(current->sock_num == i){
 					handle_data(current);
 				}
 			}
@@ -197,7 +221,9 @@ void send_message_to_all_clients(char* msg, size_t size){
         			perror("send error");
         			break;
     			}
-    			printf("sent msg to client %s\nmsg: %s\n", current->client_name, msg);
+    			else{
+	    			printf("sent msg to client %s\nmsg: %s bytes: %ld\n", current->client_name, msg,bytes_sent);
+    			}
 			}
 			current = current->next;
 			itr++;
@@ -209,22 +235,23 @@ void send_message_to_all_clients(char* msg, size_t size){
 void send_updated_files_list(){
 	traverseFiles();
 	char *file_list_buffer;
-	file_list_buffer = malloc(sizeof(files.number_of_files*MAX_FILENAME_SIZE));
-	struct file_entry *current;
-	if(files.first != 0){
-		current = files.first;
-		while(current != 0){
+	size_t file_list_buf_size= files.number_of_files*MAX_FILENAME_SIZE;
+	file_list_buffer = malloc(file_list_buf_size);
+	FILE_ENTRY *current;
+	current = files.first;
+	if(files.first){
+		while(current){
 			strcat(file_list_buffer, current->file_name);
 			current = current->next;
 		}
-		send_message_to_all_clients(file_list_buffer, sizeof(file_list_buffer));
-	}
+		send_message_to_all_clients(file_list_buffer, file_list_buf_size);
+	}	
 	else{
 		char msg[] = "No files available for sharing";
 		send_message_to_all_clients(msg, sizeof(msg));
-		free(msg);
 	}
-	
+	memset(file_list_buffer,0,files.number_of_files*MAX_FILENAME_SIZE);
+	// free(file_list_buffer);
 
 }
 
@@ -523,7 +550,8 @@ int main(int argc,char *argv[])
 		            }
                 }
                 else{
-                	check_existing_connections();
+                	printf("exiting connections check\n");
+                	check_existing_connections(i);
                 }
                 
                 // else if(getClientFromSocket(i, current_client) != -1){

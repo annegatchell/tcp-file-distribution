@@ -18,17 +18,24 @@
 // You can be creative here and design a code similar to the server to handle multiple connections.
 // #define PORT "6000"
 #define LOG_FILE "client-log.txt"
-#define MAX_RECEIVE_BUFFER_LENGTH 500
+#define MAX_RECEIVE_BUFFER_LENGTH 1024
+#define STDIN 0
 
 
 int sockfd; //connect to server on sockfd
 int listenfd = 0; //listen on port listenfd
 fd_set active_fd_set; 
 char *listen_port_num = 0;
+char files_name_string[20*80];
+FILE *fileListFile;
+char *file_list_name;
+
+
 
 void build_select_list(){
     FD_ZERO(&active_fd_set);
     FD_SET(sockfd, &active_fd_set);
+    FD_SET(STDIN, &active_fd_set);
 
     //NEED TO IMPLMENT LISTENER SOCKET
     if(listenfd != 0){
@@ -37,13 +44,13 @@ void build_select_list(){
     }
 }
 
-void update_list_of_files(FILE *fileListFile, char files[][80], char* log_file_name, char files_name_string[]){
+void update_list_of_files(){
     char line[80];
-    fileListFile = fopen(log_file_name, "rt");
+    fileListFile = fopen(file_list_name, "rt");
     int i = 0;
     int z = 0;
     while(fgets(line, 80, fileListFile) != NULL){
-        sscanf(line, "%s",files[i]);
+        //sscanf(line, "%s",files[i]);
         printf("%d\n", z);
         printf("%s\n", line);
         strcat(files_name_string, line);
@@ -51,8 +58,38 @@ void update_list_of_files(FILE *fileListFile, char files[][80], char* log_file_n
         //printf("%s\n", files[i]);
         i++;
     }
+    fclose(fileListFile);
 
 }
+
+void interpret_commant(char command[]){
+    char* temp;
+    char cmd[16];
+    int val;
+    size_t bytes_sent;
+
+
+    printf("in here\n");
+    temp = strtok(command," ");
+    strcpy(cmd, temp);
+    printf("Val %d\n", val);
+    if((val = strcmp(cmd, "Get\n")) == 0){
+        printf("GET\n");
+    }
+    else if((val = strcmp(cmd, "List\n"))==0){
+        printf("LIST\n");
+        if((bytes_sent = send(sockfd, cmd, sizeof(cmd), 0)) == -1){
+            perror("send error");
+        }
+        printf("Bytes sent: %ld\n", bytes_sent);
+    }
+    else if((val = strcmp(cmd, "SendMyFilesList\n")) == 0){
+        printf("SEND<MYFILELIST\n");
+    }
+
+}
+
+
 // get sockaddr, IPv4 or IPv6:
 void *get_in_addr(struct sockaddr *sa)
 {
@@ -76,14 +113,12 @@ int main(int argc, char *argv[])
     struct addrinfo hints, *servinfo, *p, *listenerinfo;
     int status; //Error status
     char receive_buffer[MAX_RECEIVE_BUFFER_LENGTH];
-    char * server_ip, *server_port_num, *client_name, *log_file_name;
+    char * server_ip, *server_port_num, *client_name;
     struct sockaddr_storage client_addr; //Connector's address information
     socklen_t addr_size;
 
-    FILE *fileListFile;
     char line[80];
-    char files[20][80];
-    char files_name_string[20*80];
+    
     memset(files_name_string, 0, sizeof(files_name_string));
 
      int BACKLOG = 1; //Number of clients allowed in queue
@@ -98,11 +133,11 @@ int main(int argc, char *argv[])
     server_ip = argv[2];
     server_port_num = argv[3];
     client_name = argv[1];
-    log_file_name  = argv[4];
+    file_list_name  = argv[4];
     listen_port_num = argv[5];
 
     //Get the list of files
-    update_list_of_files(fileListFile, files, argv[4], files_name_string);
+    update_list_of_files();
     printf("%s\n", files_name_string);
 
 //Log the start up time
@@ -215,14 +250,16 @@ int main(int argc, char *argv[])
             perror("Server can't listen!!!\n");
         }
     }
-    printf("HAve I gotten past listen?\n");
     int readsocks;
+    int i;
+    char command[200];
     for(;;){
     	//now that you're listening, check to see if anyone is trying 
         // to connect
         // hint:  select()
         // Run select() with no timeout for now, waiting to see if there is
         // a pending connection on the socket waiitng to be accepted with accept
+        // printf("beginning of loop\n");
         build_select_list();
         if ((readsocks = select(FD_SETSIZE, &active_fd_set, (fd_set*) 0, (fd_set*) 0, NULL)) == -1) {
             perror("select");
@@ -231,72 +268,52 @@ int main(int argc, char *argv[])
         else if(readsocks == 0){
             printf("Nothing to read\n");
         }
-        else
-        {
-        //If the connection is on the Server socket
-            if(FD_ISSET(sockfd, &active_fd_set)){
-            // if(i == sockfd){
-                
-                if((bytes_received = recv(sockfd,receive_buffer,
-                            MAX_RECEIVE_BUFFER_LENGTH,0)) == -1){
-                    perror("receive error");
-                    return 2;
+        for(i = 0; i < FD_SETSIZE; i++){
+            // printf("for loop\n");
+            if(FD_ISSET(i, &active_fd_set)){
+
+            //If the connection is on the Server socket
+                if(i == sockfd){
+                    // printf("WHERE AM I\n");
+                    if((bytes_received = recv(i,receive_buffer, MAX_RECEIVE_BUFFER_LENGTH,0)) < 0){
+                        perror("receive error");
+                        return 2;
+                    }
+                    else if(bytes_received == 0){
+                        // printf("no bytes\n");
+                    }
+                    else if(bytes_received > 0){
+                        printf("Got a packet from the server!\n");
+                        printf("Bytes received %d\n%s\n", bytes_received, receive_buffer);
+                    }
+                    memset(receive_buffer, 0, sizeof(receive_buffer));
                 }
-                else if(bytes_received == 0){
-                    4;
+            //If the connection is on the listening socket
+                else if(i == listenfd){
+                // if(i == sockfd){
+                    printf("Got a connection from another client!\n");
+                    //Accept the connection
+                    listenfd = accept(listenfd, (struct sockaddr *)&client_addr, &addr_size);
+                    if(listenfd < 0){
+                        perror ("accept");
+                        exit (EXIT_FAILURE);
+                    }
+                    //add new socket to the listening list
+                    //FD_SET(newsockfd, &active_fd_set);
+                    inet_ntop(client_addr.ss_family,
+                                get_in_addr((struct sockaddr *)&client_addr), ip_s, sizeof(ip_s)); 
+                    printf("server: got connection from %s\n", ip_s);
                 }
-                else if(bytes_received > 0){
-                    printf("Got a packet from the server!\n");
-                    printf("Bytes received %d\n%s\n", 
-                    bytes_received, receive_buffer);
-                }
-                else{
-                    4;
+                else if(i == STDIN){
+                    fgets(command, sizeof(command), stdin);
+                    printf("YEAH I HEARD YOU\n");
+
+                    interpret_commant(command);
                 }
             }
-        //If the connection is on the listening socket
-            else if(FD_ISSET(listenfd, &active_fd_set)){
-            // if(i == sockfd){
-                printf("Got a connection from another client!\n");
-                //Accept the connection
-                listenfd = accept(listenfd, (struct sockaddr *)&client_addr, &addr_size);
-                if(listenfd < 0){
-                    perror ("accept");
-                    exit (EXIT_FAILURE);
-                }
-                //add new socket to the listening list
-                //FD_SET(newsockfd, &active_fd_set);
-                inet_ntop(client_addr.ss_family,
-                            get_in_addr((struct sockaddr *)&client_addr), ip_s, sizeof(ip_s)); 
-                printf("server: got connection from %s\n", ip_s);
-            }
-
-
-
         }
+        
 
-    	//Send a message to server with name and files list
-        int i;
-    	char msg2[100];
-    	for(i = 0; i < 0; i++){
-    		sprintf(msg2,"test %d from %s", i, client_name);
-    		len = strlen(msg2);
-    		printf("%s\n", msg2);
-    		if((bytes_sent = send(sockfd, msg2, len, 0)) == -1){
-    			perror("send error");
-    			return 2;
-    		}
-    		// printf("Bytes sent: %d\n", bytes_sent);
-    		if((bytes_received = recv(sockfd,receive_buffer,
-    			MAX_RECEIVE_BUFFER_LENGTH,0)) == -1){
-    		perror("receive error");
-    		return 2;
-    		}
-    		else{
-    			// printf("Bytes received %d\n%s", 
-    			// 			bytes_received, receive_buffer);
-    		}
-    	}
 	}
     freeaddrinfo(listenerinfo);
 
