@@ -138,28 +138,64 @@ void build_select_list(){
 		}
 	}
 }
-void interpret_commant(char command[]){
+
+int find_IP_for_file(char filename[], char addr[]){
+	FILE_ENTRY *current;
+	current = files.first;
+	while(current){
+		if (strcmp(current->file_name, filename) == 0){
+			return current->client->ip;
+		}
+		current = current->next;
+	}
+	return 0;
+}
+
+void interpret_commant(char command[], CLIENT_LIST_ENTRY *client){
     char* temp;
+    char* intermediate = malloc(sizeof(command));
+    strcpy(intermediate, command);
     char cmd[16];
     int val;
     size_t bytes_sent;
-
+    printf("%s\n", command);
+    char* msg;
+    char ip_temp[INET6_ADDRSTRLEN];
 
     printf("in here\n");
-    if((temp = strtok(command," ")) != NULL){
+    if((temp = strtok(intermediate," ")) != NULL){
     	printf("%s\n", temp);
 	    // strcpy(cmd, temp);
-	    printf("Val %d\n", val);
+	    
 	    if((val = strcmp(temp, "Get")) == 0){
 	        printf("GET\n");
-
+	      	
+	        if((temp = strtok(NULL,"\n")) != NULL){
+	        	printf("1 %s\n", temp);
+	        }
+	        if(find_IP_for_file(temp,ip_temp) == 0){
+	        	printf("No file here\n");
+	        	msg = "Sorry, that file is not available\n";
+	        	if((bytes_sent = send(client->sock_num, msg, strlen(msg), 0)) == -1){
+	    			perror("send error");
+				}
+				else{
+	    			printf("no file sent msg to client %s\nmsg: %s bytes: %ld\n", client->client_name, msg,bytes_sent);
+				}
+	        }
+	        else{
+	        	printf("%s\n", ip_temp);
+		        if((bytes_sent = send(client->sock_num, ip_temp, sizeof(ip_temp), 0)) == -1){
+	    			perror("send error");
+				}
+				else{
+	    			printf("yes files sent msg to client %s\nmsg: %s bytes: %ld\n", client->client_name, msg,bytes_sent);
+				}
+			}
 	    }
 	    else if((val = strcmp(temp, "List\n"))==0){
 	        printf("LIST\n");
 	        send_updated_files_list();
-	    }
-	    else if((val = strcmp(temp, "SendMyFilesList\n")) == 0){
-	        printf("SEND<MYFILELIST\n");
 	    }
 	    else{
 	    	send_updated_files_list();
@@ -171,7 +207,7 @@ void interpret_commant(char command[]){
 
 }
 
-void handle_data(struct clientListEntry *client){
+void handle_data(CLIENT_LIST_ENTRY *client){
 	// printf("HANDLING THE DATA\n");
 	char buffer[1024];
 	int bytes_received;
@@ -188,7 +224,7 @@ void handle_data(struct clientListEntry *client){
     else
     {
         printf("Bytes received %d\nmessage %s\n", bytes_received, buffer);
-        interpret_commant(buffer);
+        interpret_commant(buffer, client);
         char* msg = "got cha msg, foo\n";
         int len, bytes_sent;
         len = strlen(msg);

@@ -20,6 +20,7 @@
 #define LOG_FILE "client-log.txt"
 #define MAX_RECEIVE_BUFFER_LENGTH 1024
 #define STDIN 0
+#define MAX_CMD_LINE 200
 
 
 int sockfd; //connect to server on sockfd
@@ -81,32 +82,35 @@ void send_file_list(){
 
 void interpret_commant(char command[]){
     char* temp;
+    char intermediate[MAX_CMD_LINE];
+    strcpy(intermediate, command);
+
     char cmd[16];
     int val;
     size_t bytes_sent;
+   
 
-
-    printf("in here\n");
-    temp = strtok(command," ");
+    printf("in here int %s\n", intermediate);
+    temp = strtok(intermediate," ");
     strcpy(cmd, temp);
     printf("Val %d\n", val);
-    if((val = strcmp(cmd, "Get")) == 0){
+    if((val = strcmp(intermediate, "Get")) == 0){
         printf("GET\n");
+        printf("%s\n", command);
+        if((bytes_sent = send(sockfd, command, MAX_CMD_LINE, 0)) == -1){
+            perror("send error");
+        }
+        printf("Bytes sent: %ld\n", bytes_sent);
+    }
+    else if((val = strcmp(intermediate, "List\n"))==0){
         printf("LIST\n");
         if((bytes_sent = send(sockfd, cmd, sizeof(cmd), 0)) == -1){
             perror("send error");
         }
         printf("Bytes sent: %ld\n", bytes_sent);
     }
-    else if((val = strcmp(cmd, "List\n"))==0){
-        printf("LIST\n");
-        if((bytes_sent = send(sockfd, cmd, sizeof(cmd), 0)) == -1){
-            perror("send error");
-        }
-        printf("Bytes sent: %ld\n", bytes_sent);
-    }
-    else if((val = strcmp(cmd, "SendMyFilesList\n")) == 0){
-        printf("SEND<MYFILELIST\n");
+    else if((val = strcmp(intermediate, "SendMyFilesList\n")) == 0){
+        printf("SENDMYFILELIST\n");
         send_file_list();
     }
 
@@ -276,7 +280,7 @@ int main(int argc, char *argv[])
     }
     int readsocks;
     int i;
-    char command[200];
+    char command[MAX_CMD_LINE];
     for(;;){
     	//now that you're listening, check to see if anyone is trying 
         // to connect
