@@ -30,6 +30,7 @@ typedef struct fileList FILE_LIST;
 struct clientListEntry{
 	int sock_num;
 	char client_name[24];
+	char ip[INET6_ADDRSTRLEN];
 	CLIENT_LIST_ENTRY *next;
 };
 
@@ -46,6 +47,7 @@ struct clientList
 	CLIENT_LIST_ENTRY *first;
 	CLIENT_LIST_ENTRY *tail;  
 };
+
 
 struct fileList
 {
@@ -68,7 +70,13 @@ FILE_LIST files = {0, 0, 0, NULL};
 //global variables
 //pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 // char logFileName[64];
-
+void traverseClients(){
+	CLIENT_LIST_ENTRY *current;
+	current = clients.first;
+	while(current){
+		printf("Client: %s, Socket: %d IP: %s\n",current->client_name, current->sock_num, current->ip);
+	}
+}
 
 int getClientFromSocket(int s, struct clientListEntry **client){
 	CLIENT_LIST_ENTRY *current;
@@ -456,6 +464,7 @@ int main(int argc,char *argv[])
 			            //#######################
 		            
 		                new_entry->sock_num = i;
+		                strcpy(new_entry->ip, s);
 		                strcpy(new_entry->client_name, client_name);
 		                new_entry->next = NULL;
 		                if(!clients.first){
