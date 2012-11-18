@@ -21,6 +21,7 @@
 #define MAX_RECEIVE_BUFFER_LENGTH 1024
 #define STDIN 0
 #define MAX_CMD_LINE 200
+#define C_TO_C_PORTNUM "6050"
 
 
 int sockfd; //connect to server on sockfd
@@ -80,8 +81,20 @@ void send_file_list(){
     printf("Bytes sent: %ld\n", bytes_sent);
 }
 
-void connect_to_other_client(){
-    
+void connect_to_other_client(char *server_ip){
+    struct addrinfo hints, *servinfo;
+    int status; //Error status
+    char receive_buffer[MAX_RECEIVE_BUFFER_LENGTH];
+
+    //Set up the address struct
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family= AF_UNSPEC; //AF_INET or AF_INET6
+    hints.ai_socktype = SOCK_STREAM; //TCP stream sockets
+
+    if((status = getaddrinfo(server_ip, C_TO_C_PORTNUM, &hints, &servinfo)) != 0){
+        fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(status));
+    }   
+
 }
 
 int interpret_commant(char command[]){
@@ -121,7 +134,7 @@ int interpret_commant(char command[]){
         }
         else{
             printf("ip %s\n", ip_recv);
-            connect_to_other_client();
+            connect_to_other_client(ip_recv);
         }   
 
     }
@@ -166,8 +179,7 @@ int main(int argc, char *argv[])
     struct tm *nowtm;
     char tmbuf[64];
     FILE *logFile;
-    
-    int numBytes;
+  
     struct addrinfo hints, *servinfo, *p, *listenerinfo;
     int status; //Error status
     char receive_buffer[MAX_RECEIVE_BUFFER_LENGTH];
@@ -175,7 +187,7 @@ int main(int argc, char *argv[])
     struct sockaddr_storage client_addr; //Connector's address information
     socklen_t addr_size;
 
-    char line[80];
+  
     
     memset(files_name_string, 0, sizeof(files_name_string));
 
@@ -183,6 +195,7 @@ int main(int argc, char *argv[])
      int yes=1;
      char ip_s[INET6_ADDRSTRLEN];
 
+    memset(receive_buffer,0,sizeof(receive_buffer));
 
     if(argc != 6){
     	printf("usage is ./client <client name> <server ip> <server port#> <list of files> <listen port>\n");
@@ -263,7 +276,7 @@ int main(int argc, char *argv[])
 		return 2;
 	}
 	else{
-		printf("Bytes received %d\n%s", 
+		printf("Bytes received %d\n%s\n", 
 					bytes_received, receive_buffer);
 	}
     //We GOT A CONNECTION FROM THE SERVER. SET UP LISTENING PORT
