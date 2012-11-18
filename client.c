@@ -46,9 +46,10 @@ void build_select_list(){
 
 void update_list_of_files(){
     char line[80];
-    fileListFile = fopen(file_list_name, "rt");
+    fileListFile = fopen(file_list_name, "r");
     int i = 0;
     int z = 0;
+    memset(files_name_string,0,sizeof(files_name_string));
     while(fgets(line, 80, fileListFile) != NULL){
         //sscanf(line, "%s",files[i]);
         printf("%d\n", z);
@@ -59,7 +60,23 @@ void update_list_of_files(){
         i++;
     }
     fclose(fileListFile);
+}
 
+void send_file_list(){
+    size_t bytes_sent;
+   
+    // char tmp[] = "files\n";
+    // char *m = malloc(sizeof(tmp) + sizeof(files_name_string));
+    // printf("hello?\n");
+    // m = strcat(tmp, files_name_string);
+    // printf("message %s\n", m);
+    
+    int len = strlen(files_name_string);
+    if((bytes_sent = send(sockfd, files_name_string, len, 0)) == -1){
+        perror("send error");
+    }
+    printf("message %s\n", files_name_string);
+    printf("Bytes sent: %ld\n", bytes_sent);
 }
 
 void interpret_commant(char command[]){
@@ -73,8 +90,13 @@ void interpret_commant(char command[]){
     temp = strtok(command," ");
     strcpy(cmd, temp);
     printf("Val %d\n", val);
-    if((val = strcmp(cmd, "Get\n")) == 0){
+    if((val = strcmp(cmd, "Get")) == 0){
         printf("GET\n");
+        printf("LIST\n");
+        if((bytes_sent = send(sockfd, cmd, sizeof(cmd), 0)) == -1){
+            perror("send error");
+        }
+        printf("Bytes sent: %ld\n", bytes_sent);
     }
     else if((val = strcmp(cmd, "List\n"))==0){
         printf("LIST\n");
@@ -85,6 +107,7 @@ void interpret_commant(char command[]){
     }
     else if((val = strcmp(cmd, "SendMyFilesList\n")) == 0){
         printf("SEND<MYFILELIST\n");
+        send_file_list();
     }
 
 }
@@ -139,6 +162,7 @@ int main(int argc, char *argv[])
     //Get the list of files
     update_list_of_files();
     printf("%s\n", files_name_string);
+    update_list_of_files();
 
 //Log the start up time
     gettimeofday(&currTime,NULL);

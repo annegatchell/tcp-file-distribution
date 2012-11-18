@@ -146,18 +146,26 @@ void interpret_commant(char command[]){
 
 
     printf("in here\n");
-    temp = strtok(command," ");
-    strcpy(cmd, temp);
-    printf("Val %d\n", val);
-    if((val = strcmp(cmd, "Get\n")) == 0){
-        printf("GET\n");
-    }
-    else if((val = strcmp(cmd, "List\n"))==0){
-        printf("LIST\n");
-        send_updated_files_list();
-    }
-    else if((val = strcmp(cmd, "SendMyFilesList\n")) == 0){
-        printf("SEND<MYFILELIST\n");
+    if((temp = strtok(command," ")) != NULL){
+    	printf("%s\n", temp);
+	    // strcpy(cmd, temp);
+	    printf("Val %d\n", val);
+	    if((val = strcmp(temp, "Get\n")) == 0){
+	        printf("GET\n");
+	    }
+	    else if((val = strcmp(temp, "List\n"))==0){
+	        printf("LIST\n");
+	        send_updated_files_list();
+	    }
+	    else if((val = strcmp(temp, "SendMyFilesList\n")) == 0){
+	        printf("SEND<MYFILELIST\n");
+	    }
+	    else{
+	    	send_updated_files_list();
+	    }
+	}
+    else{
+    	send_updated_files_list();
     }
 
 }
@@ -192,12 +200,12 @@ void handle_data(struct clientListEntry *client){
 }
 
 void check_existing_connections(int i){
-	printf("Getting in here\n");
+	// printf("Getting in here\n");
 	CLIENT_LIST_ENTRY *current;
 	if(clients.first != 0){
 		current = clients.first;
 		while(current != 0){
-			printf("check_existing_connections client name %s\n",current->client_name);
+			// printf("check_existing_connections client name %s\n",current->client_name);
 			if(current->sock_num != 0){
 				if(current->sock_num == i){
 					handle_data(current);
@@ -550,7 +558,7 @@ int main(int argc,char *argv[])
 		            }
                 }
                 else{
-                	printf("exiting connections check\n");
+                	// printf("exiting connections check\n");
                 	check_existing_connections(i);
                 }
                 
