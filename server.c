@@ -19,7 +19,10 @@
 #define LOG_FILE "server-log.txt"
 #define MAX_BUFFER_SIZE 500
 #define MAX_FILENAME_SIZE 80
-
+typedef struct file_entry FILE_ENTRY;
+typedef struct clientListEntry CLIENT_LIST_ENTRY;
+typedef struct clientList CLIENT_LIST;
+typedef struct fileList FILE_LIST;
 /*
  * You should use a globally declared linked list or an array to 
  * keep track of your connections.  Be sure to manage either properly
@@ -27,7 +30,7 @@
 struct clientListEntry{
 	int sock_num;
 	char client_name[24];
-	struct clientListEntry *next;
+	CLIENT_LIST_ENTRY *next;
 };
 
 struct file_entry
@@ -35,27 +38,28 @@ struct file_entry
 	char file_name[MAX_FILENAME_SIZE];
 	int size;
 	struct clientListEntry *client;
-	struct file_entry *next;	
+	FILE_ENTRY *next;	
 };
 
 struct clientList
 {
-	struct clientListEntry *first;
+	CLIENT_LIST_ENTRY *first;
 	//after_last points to the same place as the next pointer of the last entry
-	struct clientListEntry *after_last;  
+	CLIENT_LIST_ENTRY *after_last;  
 };
 
 struct fileList
 {
-	struct file_entry *first;
-	struct file_entry *after_last;
+	FILE_ENTRY *first;
+	int number_of_files;
+	FILE_ENTRY *after_last;
 
 };
 
-struct clientList clients = {0, 0};
+CLIENT_LIST clients = {NULL, NULL};
 fd_set active_fd_set;  // temp file descriptor list for select()
 int sockfd, newsockfd = 0; //Listen on sockfd, new connection on newsockfd
-struct fileList files = {0, 0};
+FILE_LIST files = {0, 0, 0};
 
 
 //thread function declaration
@@ -138,7 +142,6 @@ void handle_data(struct clientListEntry *client){
         len = strlen(msg);
         if((bytes_sent = send(client->sock_num, msg, len, 0)) == -1){
         	perror("send error");
-        	return 2;
         }
         printf("Sent welcome: Bytes sent: %d\n", bytes_sent);
     }
@@ -147,48 +150,69 @@ void handle_data(struct clientListEntry *client){
 
 void check_existing_connections(){
 	// printf("stuckin hesre\n");
-	struct clientListEntry *current;
+	CLIENT_LIST_ENTRY *current;
 	if(clients.first != 0){
 		current = clients.first;
 		while(current != 0){
+			printf("check_existing_connections client name %s\n",current->client_name);
 			if(current->sock_num != 0){
 				if(FD_ISSET(current->sock_num, &active_fd_set)){
-
 					handle_data(current);
 				}
-				current = current->next;
 			}
+			current = current->next;
 		}
 	}
 }
 
 void send_message_to_all_clients(char* msg, size_t size){
-	struct clientListEntry *current;
+	int itr = 0; 
+	CLIENT_LIST_ENTRY *current;
 	size_t bytes_sent;
 	if(clients.first != 0){
 		current = clients.first;
 		while(current != 0){
+			printf("send msg to all clients client name %s, %d\n", current->client_name, itr);
 			if(current->sock_num != 0){
 				if((bytes_sent = send(current->sock_num, msg, size, 0)) == -1){
         			perror("send error");
         			break;
     			}
-				current = current->next;
+    			printf("sent msg to client %s\nmsg: %s\n", current->client_name, msg);
 			}
+			current = current->next;
+			itr++;
 		}
 	}
 	
 }
 
 void send_updated_files_list(){
-	1;
+	char *file_list_buffer;
+	file_list_buffer = malloc(sizeof(files.number_of_files*MAX_FILENAME_SIZE));
+	int i = 0;
+	struct file_entry *current;
+	if(files.first != 0){
+		current = files.first;
+		while(current != 0){
+			strcat(file_list_buffer, current->file_name);
+			current = current->next;
+		}
+		send_message_to_all_clients(file_list_buffer, sizeof(file_list_buffer));
+	}
+	else{
+		char msg[] = "No files available for sharing";
+		send_message_to_all_clients(msg, sizeof(msg));
+		free(msg);
+	}
+	
+
 }
 
 void add_file_list_to_table(char file_list[], int recv_port){
 	//Use strtok to find our happy jolly file names
 	//char* strtok( char* str, const char* delim );
 	char* temp;
-
 	temp = strtok(file_list, "\n");
 	// printf("TEMP %s\n", temp);
 	files.after_last = malloc(sizeof(struct file_entry));
@@ -196,11 +220,11 @@ void add_file_list_to_table(char file_list[], int recv_port){
 	printf("string after copy: %s\n", files.after_last->file_name);
 	files.after_last->size = 0;
 	//What client is it? get from recv_port
-	struct clientListEntry *tmp_client = malloc(sizeof(struct clientListEntry));
+	CLIENT_LIST_ENTRY *tmp_client;
 	// printf("tmp_client ptr before %p\n", tmp_client);
 	if(getClientFromSocket(recv_port, &tmp_client) == -1){
 
-		fprintf(stderr, "Error in getting the client from socket");
+		fprintf(stderr, "add_file_list_to_table: Error in getting the client from socket\n");
 	}
 	else{
 		// printf("tmp_client ptr%p\n", tmp_client);
@@ -208,7 +232,8 @@ void add_file_list_to_table(char file_list[], int recv_port){
 		files.after_last->client = tmp_client;
 		// printf("client after get client: %s\n",files.after_last->client->client_name);
 	}
-	free(tmp_client);
+	
+	files.number_of_files++;
 	files.after_last->next = 0;
 	if(files.first == 0){
 		files.first = files.after_last;
@@ -224,11 +249,10 @@ void add_file_list_to_table(char file_list[], int recv_port){
 		printf("string after copy: %s\n", files.after_last->file_name);
 		files.after_last->size = 0;
 		//What client is it? get from recv_port
-		struct clientListEntry *tmp_client = malloc(sizeof(struct clientListEntry));
 		// printf("tmp_client ptr before %p\n", tmp_client);
 		if(getClientFromSocket(recv_port, &tmp_client) == -1){
 
-			fprintf(stderr, "Error in getting the client from socket");
+			fprintf(stderr, "add_file_list_to_table: Error in getting the client from socket\n");
 		}
 		else{
 			// printf("tmp_client ptr%p\n", tmp_client);
@@ -236,7 +260,7 @@ void add_file_list_to_table(char file_list[], int recv_port){
 			files.after_last->client = tmp_client;
 			// printf("client after get client: %s\n",files.after_last->client->client_name);
 		}
-		free(tmp_client);
+		files.number_of_files++;
 		files.after_last->next = 0;
 		if(files.first == 0){
 			files.first = files.after_last;
@@ -354,8 +378,10 @@ int main(int argc,char *argv[])
     
    	// FD_ZERO(&active_fd_set); //clear the select set
    	// FD_SET(sockfd, &active_fd_set); //add socket to the listening list
-   	struct clientListEntry *current_client;
-   	struct clientListEntry *new_client;
+
+   	CLIENT_LIST_ENTRY *new_entry;
+   	if((new_entry = (CLIENT_LIST_ENTRY *)malloc(sizeof(CLIENT_LIST_ENTRY))) == NULL) 
+		              		{fprintf(stderr, "Can't allocate memory for new client\n");}
    	int readsocks; //number of sockets ready for reading
 	//printf("%d\n",FD_SETSIZE);
     for ( ; ; ) //endless loop
@@ -434,17 +460,55 @@ int main(int argc,char *argv[])
 			            //########################
 		                //new_client = {i, receive_buf, NULL};
 		                // free(file_list);
-		              
-		                clients.after_last = malloc(sizeof(struct clientListEntry));
+		              	
+		              	
+		              	printf("clients new_entry: %p\n",new_entry);
+		    //           	if((new_entry = (CLIENT_LIST_ENTRY *)malloc(sizeof(CLIENT_LIST_ENTRY))) == NULL) 
+		    //           		{fprintf(stderr, "Can't allocate memory for new client\n");}
+						// printf("clients new_entry: %p\n",new_entry);
+		                new_entry->sock_num = newsockfd;
+		                strcpy(new_entry->client_name, client_name);
+		                new_entry->next = NULL;
+		                if(!clients.first){
+		                	clients.first = new_entry;
+		                	clients.after_last = clients.first->next;
+		                }
+		                else{
+		                	clients.after_last = new_entry;
+		                	 printf("clients this: %p\n",clients.after_last);
+		                	clients.after_last = clients.after_last->next;
+
+		                }		           
+		                printf("clients first: %p\n",clients.first);
+		                printf("clients last: %p\n",clients.after_last);
+		                new_entry = clients.after_last;
+		                printf("clients new_entry: %p\n",new_entry);
+		                if((new_entry = (CLIENT_LIST_ENTRY *)malloc(sizeof(CLIENT_LIST_ENTRY))) == NULL) 
+		              		{fprintf(stderr, "Can't allocate memory for new client\n");}
+		              	printf("clients new_entry: %p\n",new_entry);
+		              	// free(new_entry);
+		  				// free(new_entry);
+		  				// printf("clients new_entry: %p\n",new_entry);
+		  				// new_entry = NULL;
+		  				// printf("clients new_entry: %p\n",new_entry);
+
+		                
+		                /*clients.after_last = temp;
+		                printf("clients last: %p\n",clients.after_last);
 		                //clients.last->next = new_client;//malloc(sizeof(struct clientListEntry));
 		                clients.after_last->sock_num = newsockfd;
 		                strcpy(clients.after_last->client_name, client_name);
 		                // clients.after_last->client_name = client_name;
 		                clients.after_last->next = 0;
+		                printf("clients this: %p\n",clients.after_last);
 		                if(clients.first == 0){
 		                	clients.first = clients.after_last;
 		                }
+		                printf("clients first: %p\n",clients.first);
 		                clients.after_last = clients.after_last->next;
+		                printf("clients last: %p\n",clients.after_last);
+		                printf("clients first: %p\n",clients.first);*/
+		                //free(temp);
 
 		                //### Add file to file list, now that it has a client to point to
 		                add_file_list_to_table(file_list, i);

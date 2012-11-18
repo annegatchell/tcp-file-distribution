@@ -184,7 +184,7 @@ int main(int argc, char *argv[])
     }
 
      // loop through all the results and bind to the first we can
-    printf("HERE\n");
+    
     for(p = listenerinfo; p != NULL; p = p->ai_next) {
     /*
      * Open a TCP socket (an Internet stream socket).
@@ -215,7 +215,7 @@ int main(int argc, char *argv[])
             perror("Server can't listen!!!\n");
         }
     }
-
+    printf("HAve I gotten past listen?\n");
     int readsocks;
     for(;;){
     	//now that you're listening, check to see if anyone is trying 
