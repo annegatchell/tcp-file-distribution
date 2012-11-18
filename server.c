@@ -53,7 +53,6 @@ struct fileList
 {
 	FILE_ENTRY *first;
 	int number_of_files;
-	FILE_ENTRY *after_last;
 	FILE_ENTRY *tail;
 
 };
@@ -61,7 +60,7 @@ struct fileList
 CLIENT_LIST clients = {NULL, NULL};
 fd_set active_fd_set;  // temp file descriptor list for select()
 int sockfd, newsockfd = 0; //Listen on sockfd, new connection on newsockfd
-FILE_LIST files = {0, 0, 0, NULL};
+FILE_LIST files = {NULL, 0, NULL};
 
 
 //thread function declaration
@@ -79,27 +78,32 @@ void traverseClients(){
 	}
 }
 
+void traverseFiles(){
+	FILE_ENTRY *current;
+	current = files.first;
+	while(current){
+		printf("Filename: %s Size: %d Owner: %s IP: %s\n", current->file_name, current->size, current->client->client_name, current->client->ip);
+		current = current->next;
+	}
+}
+
 int getClientFromSocket(int s, struct clientListEntry **client){
 	CLIENT_LIST_ENTRY *current;
-	printf("hello\n");
 	if(clients.first != 0){
-		printf("hi\n");
 		current = clients.first;
 		while(current != 0){
-			printf("client: %s socknum: %d\n", current->client_name, current->sock_num);
 			if (s == current->sock_num){
-				printf("client %p\n", client);
-				printf("*client %p\n", *client);
+				// printf("client %p\n", client);
+				// printf("*client %p\n", *client);
 				// printf("**client->client_name %p\n", **client);
 				*client = current;
-				printf("current ptr %p\n", current);
-				printf("client ptr %p\n", *client);
+				// printf("current ptr %p\n", current);
+				// printf("client ptr %p\n", *client);
 				// printf("Test access %s\n", *client->client_name);
 				return 1;
 			}
 			
 			current = current->next;
-			printf("current ptr %p\n", current);
 		}
 	}
 	return -1;
@@ -203,6 +207,7 @@ void send_message_to_all_clients(char* msg, size_t size){
 }
 
 void send_updated_files_list(){
+	traverseFiles();
 	char *file_list_buffer;
 	file_list_buffer = malloc(sizeof(files.number_of_files*MAX_FILENAME_SIZE));
 	struct file_entry *current;
@@ -230,10 +235,13 @@ void add_file_list_to_table(char file_list[], int recv_port){
 	char* temp;
 	temp = strtok(file_list, "\n");
 	// printf("TEMP %s\n", temp);
-	files.after_last = malloc(sizeof(FILE_ENTRY));
-	strcpy(files.after_last->file_name, temp);
-	printf("string after copy: %s\n", files.after_last->file_name);
-	files.after_last->size = 0;
+	FILE_ENTRY *new_entry;
+	if((new_entry = (FILE_ENTRY *)malloc(sizeof(FILE_ENTRY))) == NULL) 
+		              		{fprintf(stderr, "Can't allocate memory for new file\n");}
+	
+	strcpy(new_entry->file_name, temp);
+	printf("string after copy: %s\n", new_entry->file_name);
+	new_entry->size = 0;
 	//What client is it? get from recv_port
 	CLIENT_LIST_ENTRY *tmp_client;
 	printf("rec_v port %d\n", recv_port);
@@ -244,35 +252,46 @@ void add_file_list_to_table(char file_list[], int recv_port){
 	else{
 		// printf("tmp_client ptr%p\n", tmp_client);
 		// printf("tmp after get client: %s\n",tmp_client->client_name);
-		files.after_last->client = tmp_client;
-		printf("client after get client: %s\n",files.after_last->client->client_name);
+		new_entry->client = tmp_client;
+		printf("client after get client: %s\n",new_entry->client->client_name);
 	}
 	
 	files.number_of_files++;
-	files.after_last->next = 0;
-	if(files.first == 0){
-		files.first = files.after_last;
-	}
-	files.after_last = files.after_last->next;
+	new_entry->next = 0;
+	if(!files.first){
+    	files.first = new_entry;
+    	files.tail = new_entry;
+    }
+    else{
+    	files.tail->next = new_entry;
+    	files.tail= files.tail->next;
+    }		           
+    new_entry = files.tail->next;
+    // if((new_entry = (CLIENT_LIST_ENTRY *)malloc(sizeof(CLIENT_LIST_ENTRY))) == NULL) 
+  		// {fprintf(stderr, "Can't allocate memory for new client\n");}
 
 //#####Continue the traversal of the string
 	while((temp = strtok(NULL, "\n")) != NULL){
 		//ADD THE FILE TO THE FILE LIST
 		//Copy filename to file in file_entry
-		files.after_last = malloc(sizeof(FILE_ENTRY));
-		strcpy(files.after_last->file_name, temp);
-		printf("string after copy: %s\n", files.after_last->file_name);
-		files.after_last->size = 0;
-		//What client is it? get from recv_port
-		// printf("tmp_client ptr before %p\n", tmp_client);
-		files.after_last->client = tmp_client;
-		files.number_of_files++;
-		files.after_last->next = 0;
-		if(files.first == 0){
-			files.first = files.after_last;
-		}
-		files.after_last = files.after_last->next;
+		if((new_entry = (FILE_ENTRY *)malloc(sizeof(FILE_ENTRY))) == NULL) 
+		              		{fprintf(stderr, "Can't allocate memory for new file\n");}
 
+		strcpy(new_entry->file_name, temp);
+		printf("string after copy: %s\n", new_entry->file_name);
+		new_entry->size = 0;
+		new_entry->client = tmp_client;
+		files.number_of_files++;
+		new_entry->next = 0;
+		if(!files.first){
+	    	files.first = new_entry;
+	    	files.tail = new_entry;
+	    }
+	    else{
+	    	files.tail->next = new_entry;
+	    	files.tail= files.tail->next;
+	    }		           
+	    new_entry = files.tail->next;
 	}
 	
 	//print files:
