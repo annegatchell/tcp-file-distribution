@@ -75,6 +75,7 @@ void traverseClients(){
 	current = clients.first;
 	while(current){
 		printf("Client: %s, Socket: %d IP: %s\n",current->client_name, current->sock_num, current->ip);
+		current = current->next;
 	}
 }
 
@@ -223,6 +224,7 @@ void send_updated_files_list(){
 }
 
 void add_file_list_to_table(char file_list[], int recv_port){
+	traverseClients();
 	//Use strtok to find our happy jolly file names
 	//char* strtok( char* str, const char* delim );
 	char* temp;
@@ -473,6 +475,7 @@ int main(int argc,char *argv[])
 		                }
 		                else{
 		                	clients.tail->next = new_entry;
+		                	clients.tail= clients.tail->next;
 		                }		           
 		                new_entry = clients.tail->next;
 		                if((new_entry = (CLIENT_LIST_ENTRY *)malloc(sizeof(CLIENT_LIST_ENTRY))) == NULL) 
