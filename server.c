@@ -44,8 +44,6 @@ struct file_entry
 struct clientList
 {
 	CLIENT_LIST_ENTRY *first;
-	//after_last points to the same place as the next pointer of the last entry
-	CLIENT_LIST_ENTRY *after_last;
 	CLIENT_LIST_ENTRY *tail;  
 };
 
@@ -58,7 +56,7 @@ struct fileList
 
 };
 
-CLIENT_LIST clients = {NULL, NULL, NULL};
+CLIENT_LIST clients = {NULL, NULL};
 fd_set active_fd_set;  // temp file descriptor list for select()
 int sockfd, newsockfd = 0; //Listen on sockfd, new connection on newsockfd
 FILE_LIST files = {0, 0, 0, NULL};
@@ -463,14 +461,11 @@ int main(int argc,char *argv[])
 		                if(!clients.first){
 		                	clients.first = new_entry;
 		                	clients.tail = new_entry;
-		                	clients.after_last = clients.tail->next;
 		                }
 		                else{
 		                	clients.tail->next = new_entry;
-		                	clients.after_last = clients.tail->next;
-
 		                }		           
-		                new_entry = clients.after_last;
+		                new_entry = clients.tail->next;
 		                if((new_entry = (CLIENT_LIST_ENTRY *)malloc(sizeof(CLIENT_LIST_ENTRY))) == NULL) 
 		              		{fprintf(stderr, "Can't allocate memory for new client\n");}
 		             
