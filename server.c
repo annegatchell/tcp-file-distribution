@@ -150,8 +150,9 @@ void interpret_commant(char command[]){
     	printf("%s\n", temp);
 	    // strcpy(cmd, temp);
 	    printf("Val %d\n", val);
-	    if((val = strcmp(temp, "Get\n")) == 0){
+	    if((val = strcmp(temp, "Get")) == 0){
 	        printf("GET\n");
+
 	    }
 	    else if((val = strcmp(temp, "List\n"))==0){
 	        printf("LIST\n");
