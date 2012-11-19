@@ -1,0 +1,51 @@
+Anne Gatchell
+CSCI 5273 NETWORKS
+
+compile with make while in the main directory.
+
+For servers, run in the main directory.
+run server with:
+.server <port> <server_ip>
+eg. ./server 5555 128.138.201.66
+
+For clients, move in the a client*/ folder and then use the following command.
+run clients with:
+./client <client name> <server ip> <server port#> <list of files> <this ip>
+
+eg. ./client Anne 128.138.201.66 5555 client1/files_to_send.txt 128.138.201.67
+
+You do need to list your own port number in these commands in order for the program to work
+for some reason the self-setting option in get_addr_info was not working.
+
+
+Status:
+Clients are able to connect the the server via TCP. They are able to run the commands
+listed above, and the server is able to interpret which command is run.
+When a new client connects, the server announces their name to all the clients and 
+sends a list of all the files on the server.
+
+The List command works properly, but the format of the file list output is not
+pretty, it is raw.
+
+The SendMyFilesList command currently just resends the same list the client first sent.
+For some reason, I cannot get the txt file with the file names to be re-read without a
+segfault, so I just send the same list.
+The server currently does not go through all the files and delete/add. It just
+pushes a list of new files to all clients.
+
+The Get <file> command is interpreted by the server, and the server sends the client the ip address of the owner of the file, or tells the client that they file is not
+there.
+
+The client receives the ip address of the owner of the file, and it connects to that ip address.
+The client with the file accepts the connection, interprets and opens the file, and then sends
+the file back. The other client receives the file and writes it to that file name.
+
+
+Things that would be good to fix:
+-If the same filename exists in the client's folder, it will be appened to.
+-Max filesize is 1024 bytes. This could easily be fixed if I included the file size in the
+list of files. I would dynamically allocate a buffer to send based on the files size.
+Alas, I had to focus on the bigger issues at hand.
+-The server should be updating the list of files.
+-The server does not kick clients off after inactivity.
+
