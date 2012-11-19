@@ -21,7 +21,7 @@
 #define MAX_RECEIVE_BUFFER_LENGTH 1024
 #define STDIN 0
 #define MAX_CMD_LINE 200
-#define C_TO_C_PORTNUM "6060"
+#define C_TO_C_PORTNUM "6050"
 
 
 int sockfd; //connect to server on sockfd
@@ -32,7 +32,6 @@ char *listen_port_num = 0;
 char files_name_string[20*80];
 FILE *fileListFile;
 char *file_list_name;
-char get_file_name[80];
 
 
 
@@ -43,7 +42,7 @@ void build_select_list(){
 
     //NEED TO IMPLMENT LISTENER SOCKET
     if(listenfd != 0){
-        // printf("new sock fd %d\n", listenfd);
+        printf("new sock fd %d\n", listenfd);
         FD_SET(listenfd, &active_fd_set);
     }
 }
@@ -83,11 +82,10 @@ void send_file_list(){
     printf("Bytes sent: %ld\n", bytes_sent);
 }
 
-int connect_to_other_client(char *server_ip){
+void connect_to_other_client(char *server_ip){
     struct addrinfo hints, *servinfo, *p;
     int status; //Error status
     char receive_buffer[MAX_RECEIVE_BUFFER_LENGTH];
-    size_t bytes_sent, bytes_received;
 
     //Set up the address struct
     memset(&hints, 0, sizeof(hints));
@@ -112,34 +110,16 @@ int connect_to_other_client(char *server_ip){
             continue;
         }
         printf("Client to client connected!\n");
-        
-        //Send get file name
-        if((bytes_sent = send(sockfd, get_file_name, sizeof(get_file_name), 0)) == -1){
-            perror("send error");
-            return -1;
-        }
-        else{
-            printf("Sent the file name, bytes sent: %ld\n", bytes_sent);
-        }
-        //Receive file
-        if((bytes_received = recv(sockfd,receive_buffer,
-                            MAX_RECEIVE_BUFFER_LENGTH,0)) == -1){
-            perror("receive error");
-            return -1;
-        }
-        else{
-            printf("Bytes received for files!! %ld\n%s\n", 
-                        bytes_received, receive_buffer);
-        }
-        return 0;
-
+        break;
     }
     //If no connection was made, then exit
     if (p == NULL) {
         fprintf(stderr, "client: failed to connect\n");
-        return -1;
+        return 2;
     }
-    return -1;
+
+
+
 }
 
 int interpret_commant(char command[]){
@@ -151,7 +131,6 @@ int interpret_commant(char command[]){
     int val;
     size_t bytes_sent;
     size_t bytes_received;
-    int status;
 
     char ip_recv[INET6_ADDRSTRLEN];
 
@@ -169,10 +148,6 @@ int interpret_commant(char command[]){
     if((val = strcmp(intermediate, "Get")) == 0){
         printf("GET\n");
         printf("%s\n", command);
-        temp = strtok(NULL, "\n");
-        printf("temp %s\n", temp);
-        strcpy(get_file_name,temp);
-        printf("get_file_name %s\n", get_file_name);
         if((bytes_sent = send(sockfd, command, MAX_CMD_LINE, 0)) == -1){
             perror("send error");
         }
@@ -180,15 +155,11 @@ int interpret_commant(char command[]){
         FD_CLR(sockfd, &active_fd_set);
         if((bytes_received = recv(sockfd,ip_recv, INET6_ADDRSTRLEN,0)) < 0){
             perror("receive error");
-            return -1;
+            return 2;
         }
         else{
             printf("ip %s\n", ip_recv);
-            status = connect_to_other_client(ip_recv);
-            if(status == -1){
-                return -1;
-            }
-            return 0;
+            connect_to_other_client(ip_recv);
         }   
 
     }
@@ -201,19 +172,16 @@ int interpret_commant(char command[]){
                 perror("send error");
             }
             printf("Bytes sent: %ld\n", bytes_sent);
-            return 0;
         }
         else if((val = strcmp(temp, "SendMyFilesList")) == 0){
             printf("SENDMYFILELIST\n");
             send_file_list();
-            return 0;
         }
         else{
             printf("Invalid command\n");
-            return -1;
         }
     }
-    return -1;
+    return 0;
 
 }
 
@@ -236,7 +204,6 @@ int main(int argc, char *argv[])
     struct tm *nowtm;
     char tmbuf[64];
     FILE *logFile;
-    FILE *fp;
   
     struct addrinfo hints, *servinfo, *p, *listenerinfo;
     int status; //Error status
@@ -244,7 +211,7 @@ int main(int argc, char *argv[])
     char * server_ip, *server_port_num, *client_name;
     struct sockaddr_storage client_addr; //Connector's address information
     socklen_t addr_size;
-    size_t num_bytes_returned;
+
     
     memset(files_name_string, 0, sizeof(files_name_string));
 
@@ -267,18 +234,19 @@ int main(int argc, char *argv[])
     //Get the list of files
     update_list_of_files();
     printf("%s\n", files_name_string);
-    update_list_of_files();
+//    update_list_of_files();
 
 //Log the start up time
-    gettimeofday(&currTime,NULL);
+/*    gettimeofday(&currTime,NULL);
+
 	nowtime = currTime.tv_sec;
 	nowtm = localtime(&nowtime);
 	strftime(tmbuf, sizeof (tmbuf), "%Y-%m-%d %H:%M:%S\n", nowtm);
 	char* logFileName = LOG_FILE;
     logFile = fopen(logFileName,"a");
     fprintf(logFile,"Client started at %s\n", tmbuf);
-    fclose(logFile);
-
+    fclose(logFile);*/
+    printf("here\n");
 //Set up the address struct
     memset(&hints, 0, sizeof(hints));
     hints.ai_family= AF_UNSPEC; //AF_INET or AF_INET6
@@ -342,7 +310,7 @@ int main(int argc, char *argv[])
     hints.ai_socktype = SOCK_STREAM; //TCP stream sockets
     hints.ai_flags = AI_PASSIVE;     //fill in my IP for me
 
-    if ((status = getaddrinfo(NULL, listen_port_num, &hints, &listenerinfo)) != 0) {
+    if ((status = getaddrinfo("128.138.201.68", listen_port_num, &hints, &listenerinfo)) != 0) {
         fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(status));
         return 2;
     }
@@ -378,6 +346,9 @@ int main(int argc, char *argv[])
         if((listen(listenfd, BACKLOG)) == -1){
             perror("Server can't listen!!!\n");
         }
+	else{
+	printf("Listening");
+	}
     }
     int readsocks;
     int i;
@@ -400,7 +371,7 @@ int main(int argc, char *argv[])
         for(i = 0; i < FD_SETSIZE; i++){
             // printf("for loop\n");
             if(FD_ISSET(i, &active_fd_set)){
-
+		printf("socket is %d",i);
             //If the connection is on the Server socket
                 if(i == sockfd){
                     // printf("WHERE AM I\n");
@@ -412,7 +383,7 @@ int main(int argc, char *argv[])
                         // printf("no bytes\n");
                     }
                     else if(bytes_received > 0){
-                        printf("Got a packet from the server sockfd!\n");
+                        printf("Got a packet from the server!\n");
                         printf("Bytes received %d\n%s\n", bytes_received, receive_buffer);
                     }
                     memset(receive_buffer, 0, sizeof(receive_buffer));
@@ -422,7 +393,7 @@ int main(int argc, char *argv[])
                 // if(i == sockfd){
                     printf("Got a connection from another client!\n");
                     //Accept the connection
-                    client_to_clientfd = accept(listenfd, (struct sockaddr *)&client_addr, &addr_size);
+                    listenfd = accept(listenfd, (struct sockaddr *)&client_addr, &addr_size);
                     if(listenfd < 0){
                         perror ("accept");
                         exit (EXIT_FAILURE);
@@ -432,41 +403,10 @@ int main(int argc, char *argv[])
                     inet_ntop(client_addr.ss_family,
                                 get_in_addr((struct sockaddr *)&client_addr), ip_s, sizeof(ip_s)); 
                     printf("server: got connection from %s\n", ip_s);
-
-                    //Get the file name that they want
-                    FD_CLR(sockfd, &active_fd_set);
-                   // FD_SET(client_to_clientfd, &active_fd_set);
-                    memset(receive_buffer, 0, sizeof(receive_buffer));
-                    if((bytes_received = recv(client_to_clientfd,receive_buffer,
-                                        MAX_RECEIVE_BUFFER_LENGTH,0)) == -1){
-                        perror("receive error");
-                        return 2;
-                    }
-                    else{
-                        printf("Bytes received for filename %d\n%s\n", 
-                                    bytes_received, receive_buffer);
-                    }
-
-                    //Open the file and send it
-                    fp = fopen(receive_buffer,"r");
-                    if(fp != NULL){
-                        memset(receive_buffer,0,sizeof(receive_buffer));
-                        num_bytes_returned = fread(receive_buffer,sizeof(char),sizeof(receive_buffer),fp);
-                    }
-                    printf("the filecontents %s\n", receive_buffer);
-                    //Send the file
-                    if((bytes_sent = send(client_to_clientfd, receive_buffer, sizeof(receive_buffer), 0)) == -1){
-                        perror("send error");
-                        return -1;
-                    }
-                    else{
-                        printf("Sent the file, bytes sent: %ld\n", bytes_sent);
-                    }
-
                 }
                 else if(i == STDIN){
                     fgets(command, sizeof(command), stdin);
-                    if((interpret_commant(command) == -1)){
+                    if(!(interpret_commant(command))){
                         printf("Try again\n");
                     }
                     else{

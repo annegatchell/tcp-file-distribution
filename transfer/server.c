@@ -111,12 +111,6 @@ int getClientFromSocket(int s, struct clientListEntry **client){
 	return -1;
 }
 
-
-void sigchld_handler(int s)
-{
-    while(waitpid(-1, NULL, WNOHANG) > 0);
-}
-
 void build_select_list(){
 	FD_ZERO(&active_fd_set);
 	// printf("adding the listening socket %d to the activelist\n", newsockfd);
@@ -171,8 +165,7 @@ void interpret_commant(char command[], CLIENT_LIST_ENTRY *client){
 	    
 	    if((val = strcmp(temp, "Get")) == 0){
 	        printf("GET\n");
-
-	      	FD_CLR(sockfd, &active_fd_set);
+	      	
 	        if((temp = strtok(NULL,"\n")) != NULL){
 	        	printf("1 %s\n", temp);
 	        }
@@ -286,7 +279,6 @@ void send_message_to_all_clients(char* msg, size_t size){
 }
 
 void send_updated_files_list(){
-	printf("I am sending an updated files list\n");
 	traverseFiles();
 	char *file_list_buffer;
 	size_t file_list_buf_size= files.number_of_files*MAX_FILENAME_SIZE;
@@ -444,7 +436,7 @@ int main(int argc,char *argv[])
     hints.ai_socktype = SOCK_STREAM; //TCP stream sockets
     hints.ai_flags = AI_PASSIVE;     //fill in my IP for me
  
-    if ((status = getaddrinfo(NULL, argv[1], &hints, &servinfo)) != 0) {
+    if ((status = getaddrinfo("128.138.201.67", argv[1], &hints, &servinfo)) != 0) {
         fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(status));
         return 2;
     }
@@ -567,7 +559,7 @@ int main(int argc,char *argv[])
 
 		                new_entry->sock_num = i;
 		                //#####FOR NOW WE ARE JUST USING LOCALHOST IP ADDRS FOR ALL CLIENTS//
-		                strcpy(new_entry->ip, "localhost");
+		                strcpy(new_entry->ip, s);
 		                strcpy(new_entry->client_name, client_name);
 		                new_entry->next = NULL;
 		                if(!clients.first){
@@ -624,3 +616,66 @@ int main(int argc,char *argv[])
 	freeaddrinfo(servinfo);
     return 0;
 }
+
+
+
+
+
+/*//-----------------------------------------------------------------------------
+void *connection(void *sockid) {
+    int s = (int)sockid;
+
+    char buffer[1000];
+    struct timeval curTime;
+    int e, rc = 0;
+    int bytes_received;
+
+    pthread_detach(pthread_self());  //automatically clears the threads memory on exit
+
+    printf("A THREAD OMG %d\n", s);
+   
+    // Here we handle all of the incoming text from a particular client.
+    
+    for(;;){
+    	    	//printf("for\n");
+
+	if((bytes_received = recv(s,buffer,sizeof(buffer),0)) < 0)
+	{
+		close(s);
+	}
+    else
+    {
+        printf("In thread, Bytes received %d\ninthread message: %s\n", bytes_received, buffer);
+    }
+    //rc = recv()
+    if (bytes_received > 0)
+    {
+    	//printf("here\n");
+		if(0){// I received an 'exit' message from this client
+		pthread_mutex_lock(&mutex);
+		//remove myself from the vector of active clients
+		pthread_mutex_unlock(&mutex);
+		pthread_exit(NULL);
+		printf("Shouldn't see this!\n");
+		}
+		
+		//A requirement for 5273 students:
+	    //if I received a new files list from this client, the
+		//server must “Push”/send the new updated hash table to all clients it is connected to.
+		
+		
+		//loop through global client list and
+		//e =write(..);  
+		if (e == -1) //broken pipe.. someone has left the room
+		{
+		    pthread_mutex_lock(&mutex);
+		    //so remove them from our list
+		    pthread_mutex_unlock(&mutex);
+		}
+	
+    }
+	}
+
+    //should probably never get here
+    return 0;
+} */
