@@ -24,6 +24,8 @@ typedef struct clientListEntry CLIENT_LIST_ENTRY;
 typedef struct clientList CLIENT_LIST;
 typedef struct fileList FILE_LIST;
 
+
+
 void send_updated_files_list();
 /*
  * You should use a globally declared linked list or an array to 
@@ -63,7 +65,7 @@ CLIENT_LIST clients = {NULL, NULL};
 fd_set active_fd_set;  // temp file descriptor list for select()
 int sockfd, newsockfd = 0; //Listen on sockfd, new connection on newsockfd
 FILE_LIST files = {NULL, 0, NULL};
-
+char *server_ip;
 
 //thread function declaration
 //void *connection(void *);
@@ -112,10 +114,10 @@ int getClientFromSocket(int s, struct clientListEntry **client){
 }
 
 
-void sigchld_handler(int s)
+/*void sigchld_handler(int s)
 {
     while(waitpid(-1, NULL, WNOHANG) > 0);
-}
+}*/
 
 void build_select_list(){
 	FD_ZERO(&active_fd_set);
@@ -423,10 +425,12 @@ int main(int argc,char *argv[])
 
 
     //check arguments here
-    if (argc != 2)  {
-		printf("usage is: ./pserver <port#>\n");
+    if (argc != 3)  {
+		printf("usage is: ./pserver <port#> <this ip>\n");
 		return 0;
     }
+    server_ip = malloc(sizeof(INET6_ADDRSTRLEN));
+    server_ip = argv[2];
 
 //Log the startup time
     gettimeofday(&currTime,NULL);
@@ -444,7 +448,7 @@ int main(int argc,char *argv[])
     hints.ai_socktype = SOCK_STREAM; //TCP stream sockets
     hints.ai_flags = AI_PASSIVE;     //fill in my IP for me
  
-    if ((status = getaddrinfo(NULL, argv[1], &hints, &servinfo)) != 0) {
+    if ((status = getaddrinfo(server_ip, argv[1], &hints, &servinfo)) != 0) {
         fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(status));
         return 2;
     }
@@ -567,7 +571,7 @@ int main(int argc,char *argv[])
 
 		                new_entry->sock_num = i;
 		                //#####FOR NOW WE ARE JUST USING LOCALHOST IP ADDRS FOR ALL CLIENTS//
-		                strcpy(new_entry->ip, "localhost");
+		                strcpy(new_entry->ip, s);
 		                strcpy(new_entry->client_name, client_name);
 		                new_entry->next = NULL;
 		                if(!clients.first){

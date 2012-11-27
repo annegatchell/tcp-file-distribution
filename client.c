@@ -34,7 +34,7 @@ char files_name_string[20*80];
 FILE *fileListFile;
 char *file_list_name;
 char get_file_name[80];
-
+char *this_ip;
 
 
 void build_select_list(){
@@ -115,7 +115,7 @@ int connect_to_other_client(char *server_ip){
         printf("Client to client connected!\n");
         
         //Send get file name
-        if((bytes_sent = send(sockfd, get_file_name, sizeof(get_file_name), 0)) == -1){
+        if((bytes_sent = send(client_to_clientfd, get_file_name, sizeof(get_file_name), 0)) == -1){
             perror("send error");
             return -1;
         }
@@ -123,14 +123,19 @@ int connect_to_other_client(char *server_ip){
             printf("Sent the file name, bytes sent: %ld\n", bytes_sent);
         }
         //Receive file
-        if((bytes_received = recv(sockfd,receive_buffer,
+        if((bytes_received = recv(client_to_clientfd,receive_buffer,
                             MAX_RECEIVE_BUFFER_LENGTH,0)) == -1){
             perror("receive error");
             return -1;
         }
         else{
-            printf("Bytes received for files!! %ld\n%s\n", 
+            printf("Bytes received for files!! %ld : %s\n", 
                         bytes_received, receive_buffer);
+	    FILE *fp;
+	    fp = fopen(get_file_name,"a+");
+	    fprintf(fp,"%s",receive_buffer);
+	    fclose(fp);
+	    memset(receive_buffer, 0, sizeof(receive_buffer));
         }
         return 0;
 
@@ -256,29 +261,30 @@ int main(int argc, char *argv[])
     memset(receive_buffer,0,sizeof(receive_buffer));
 
     if(argc != 6){
-    	printf("usage is ./client <client name> <server ip> <server port#> <list of files> <listen port>\n");
+    	printf("usage is ./client <client name> <server ip> <server port#> <list of files> <this_ip>\n");
     	return 0;
     }
     server_ip = argv[2];
     server_port_num = argv[3];
     client_name = argv[1];
     file_list_name  = argv[4];
-    listen_port_num = argv[5];
-
+    listen_port_num = C_TO_C_PORTNUM;
+    this_ip = malloc(sizeof(INET6_ADDRSTRLEN));
+    this_ip = argv[5];
     //Get the list of files
     update_list_of_files();
     printf("%s\n", files_name_string);
-    update_list_of_files();
+//    update_list_of_files();
 
 //Log the start up time
-    gettimeofday(&currTime,NULL);
+  /*  gettimeofday(&currTime,NULL);
 	nowtime = currTime.tv_sec;
 	nowtm = localtime(&nowtime);
 	strftime(tmbuf, sizeof (tmbuf), "%Y-%m-%d %H:%M:%S\n", nowtm);
 	char* logFileName = LOG_FILE;
     logFile = fopen(logFileName,"a");
     fprintf(logFile,"Client started at %s\n", tmbuf);
-    fclose(logFile);
+    fclose(logFile);*/
 
 //Set up the address struct
     memset(&hints, 0, sizeof(hints));
@@ -343,7 +349,7 @@ int main(int argc, char *argv[])
     hints.ai_socktype = SOCK_STREAM; //TCP stream sockets
     hints.ai_flags = AI_PASSIVE;     //fill in my IP for me
 
-    if ((status = getaddrinfo(NULL, listen_port_num, &hints, &listenerinfo)) != 0) {
+    if ((status = getaddrinfo(this_ip, listen_port_num, &hints, &listenerinfo)) != 0) {
         fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(status));
         return 2;
     }
